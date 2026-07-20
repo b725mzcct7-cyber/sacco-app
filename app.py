@@ -299,30 +299,62 @@ def view_member_ledger(username):
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Process Password Reset if submitted from member page
+    # Clean username string
+    target_username = str(username).strip()
+
+    # Process Password Reset if submitted
     if request.method == 'POST':
         new_password = request.form.get('new_password', '').strip()
         if new_password:
-            cur.execute("UPDATE users SET password = %s WHERE LOWER(username) = LOWER(%s)", (new_password, username))
+            cur.execute(
+                "UPDATE users SET password = %s WHERE LOWER(username) = LOWER(%s)", 
+                (new_password, target_username)
+            )
             conn.commit()
-            flash(f'Password for {username} updated successfully!', 'success')
+            flash(f'Password for {target_username} updated successfully!', 'success')
         else:
             flash('Password cannot be empty.', 'danger')
 
-    cur.execute("SELECT * FROM users WHERE LOWER(username) = LOWER(%s)", (username,))
+    # Fetch Member Details safely
+    cur.execute("SELECT * FROM users WHERE LOWER(username) = LOWER(%s)", (target_username,))
     member_row = cur.fetchone()
-    member_data = dict(member_row) if member_row else {'username': username}
-
-    cur.execute("SELECT * FROM transactions WHERE LOWER(username) = LOWER(%s) ORDER BY id DESC", (username,))
-    transactions = cur.fetchall()
     
-    cur.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'approved'", (username,))
-    approved_res = cur.fetchone()
-    approved_total = approved_res['sum'] if approved_res and approved_res['sum'] else 0
+    if member_row:
+        member_data = dict(member_row)
+    else:
+        member_data = {'username': target_username, 'full_name': target_username, 'status': 'Unknown'}
 
-    cur.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'pending'", (username,))
-    pending_res = cur.fetchone()
-    pending_total = pending_res['sum'] if pending_res and pending_res['sum'] else 0
+    # Fetch Transactions
+    try:
+        cur.execute(
+            "SELECT * FROM transactions WHERE LOWER(username) = LOWER(%s) ORDER BY id DESC", 
+            (target_username,)
+        )
+        transactions = cur.fetchall()
+    except Exception:
+        transactions = []
+
+    # Fetch Approved Total Safely
+    try:
+        cur.execute(
+            "SELECT SUM(amount) AS total FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'approved'", 
+            (target_username,)
+        )
+        approved_res = cur.fetchone()
+        approved_total = float(approved_res['total']) if approved_res and approved_res['total'] is not None else 0.0
+    except Exception:
+        approved_total = 0.0
+
+    # Fetch Pending Total Safely
+    try:
+        cur.execute(
+            "SELECT SUM(amount) AS total FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'pending'", 
+            (target_username,)
+        )
+        pending_res = cur.fetchone()
+        pending_total = float(pending_res['total']) if pending_res and pending_res['total'] is not None else 0.0
+    except Exception:
+        pending_total = 0.0
 
     cur.close()
     conn.close()
@@ -334,7 +366,6 @@ def view_member_ledger(username):
         approved_total=approved_total,
         pending_total=pending_total
     )
-
 
 # --- APPROVE USER ROUTE ---
 @app.route('/admin/approve_user/<username>')
