@@ -3,7 +3,9 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 
+# ---------------------------------------------------------
 # 1. INITIALIZE FLASK APP
+# ---------------------------------------------------------
 app = Flask(__name__)
 app.secret_key = 'sacco_secret_key_here'
 
@@ -11,12 +13,15 @@ app.secret_key = 'sacco_secret_key_here'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 
+# ---------------------------------------------------------
 # 2. DATABASE HELPER & INITIALIZATION
+# ---------------------------------------------------------
 def get_db_connection():
     if not DATABASE_URL:
         raise ValueError("DATABASE_URL environment variable is missing in Render settings.")
         
     url = DATABASE_URL
+    # Fix legacy postgres:// URL scheme if passed by Render
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
         
@@ -65,7 +70,7 @@ def init_db():
         
         conn.commit()
 
-        # Guarantee Admin Account
+        # Guarantee Admin Account exists and credentials match admin/admin123
         cur.execute('''
             INSERT INTO users (full_name, username, password, role, status)
             VALUES (%s, %s, %s, %s, %s)
@@ -76,7 +81,7 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database structure initialized and admin account verified!")
+        print("Database tables verified & admin account ready.")
     except Exception as e:
         print("Database initialization notice/error:", e)
 
@@ -84,7 +89,9 @@ def init_db():
 init_db()
 
 
-# --- 3. ROUTES ---
+# ---------------------------------------------------------
+# 3. APPLICATION ROUTES
+# ---------------------------------------------------------
 
 @app.route('/')
 def home():
@@ -177,7 +184,7 @@ def register():
     return render_template('signup.html')
 
 
-# --- STAFF DASHBOARD ROUTE ---
+# --- STAFF DASHBOARD (VIEW TRANSACTIONS & SUBMIT DEPOSITS) ---
 @app.route('/dashboard', methods=['GET', 'POST'])
 @app.route('/staff_dashboard', methods=['GET', 'POST'])
 def staff_dashboard():
@@ -190,6 +197,7 @@ def staff_dashboard():
     conn = get_db_connection()
     cur = conn.cursor()
 
+    # Process Deposit Form Submission
     if request.method == 'POST':
         amount = request.form.get('amount')
         frequency = request.form.get('frequency', 'Monthly')
@@ -210,6 +218,7 @@ def staff_dashboard():
             flash('Please enter a valid deposit amount.', 'danger')
         return redirect(url_for('staff_dashboard'))
 
+    # Fetch User Transactions
     try:
         cur.execute('SELECT * FROM transactions WHERE LOWER(username) = LOWER(%s) ORDER BY id DESC', (username,))
         user_txs = cur.fetchall()
@@ -217,6 +226,7 @@ def staff_dashboard():
         conn.rollback()
         user_txs = []
 
+    # Calculate User Totals
     try:
         cur.execute("SELECT SUM(amount) AS total FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'approved'", (username,))
         res = cur.fetchone()
@@ -245,7 +255,7 @@ def staff_dashboard():
     )
 
 
-# --- DEPOSIT ROUTE REDIRECT ---
+# --- DEPOSIT / PAYMENT ROUTE REDIRECT ---
 @app.route('/deposit', methods=['GET', 'POST'])
 @app.route('/make_payment', methods=['GET', 'POST'])
 def make_payment():
@@ -261,6 +271,7 @@ def admin_dashboard():
     conn = get_db_connection()
     cur = conn.cursor()
     
+    # Pending Approval Users
     try:
         cur.execute("SELECT * FROM users WHERE LOWER(status) = 'pending' AND (LOWER(role) != 'admin' OR role IS NULL)")
         pending_users = cur.fetchall()
@@ -268,6 +279,7 @@ def admin_dashboard():
         conn.rollback()
         pending_users = []
 
+    # Approved Staff List
     try:
         cur.execute("SELECT * FROM users WHERE (LOWER(status) = 'approved' OR status IS NULL) AND (LOWER(role) != 'admin' OR role IS NULL)")
         staff_list = cur.fetchall()
@@ -275,6 +287,7 @@ def admin_dashboard():
         conn.rollback()
         staff_list = []
 
+    # All Transactions
     try:
         cur.execute("SELECT * FROM transactions ORDER BY id DESC")
         transactions = cur.fetchall()
@@ -282,6 +295,7 @@ def admin_dashboard():
         conn.rollback()
         transactions = []
 
+    # Vault & Summary Calculations
     try:
         cur.execute("SELECT SUM(amount) AS total FROM transactions WHERE LOWER(status) = 'approved'")
         res = cur.fetchone()
@@ -298,6 +312,7 @@ def admin_dashboard():
         conn.rollback()
         pending = 0.0
 
+    # Payouts History
     try:
         cur.execute("SELECT * FROM payouts ORDER BY id DESC")
         payout_history = cur.fetchall()
@@ -331,6 +346,37 @@ def admin_dashboard():
     )
 
 
+# --- ADMIN ADD PAYOUT ROUTE ---
+@app.route('/admin/add_payout', methods=['POST'])
+def add_payout():
+    if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
+        return redirect(url_for('login'))
+        
+    username = request.form.get('username', '').strip()
+    amount = request.form.get('amount')
+    date_str = request.form.get('date')
+    notes = request.form.get('notes', '')
+
+    if username and amount and float(amount) > 0:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO payouts (username, amount, date, notes) VALUES (%s, %s, %s, %s)",
+                (username, float(amount), date_str, notes)
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash(f'Payout of {amount} recorded for {username}!', 'success')
+        except Exception as e:
+            flash(f'Error adding payout: {e}', 'danger')
+    else:
+        flash('Please fill in a valid payout amount and username.', 'danger')
+
+    return redirect(url_for('admin_dashboard'))
+
+
 # --- ADMIN MEMBER LEDGER & PASSWORD RESET ROUTE ---
 @app.route('/admin/member/<username>', methods=['GET', 'POST'])
 @app.route('/ledger/<username>', methods=['GET', 'POST'])
@@ -342,7 +388,7 @@ def view_member_ledger(username):
     cur = conn.cursor()
     target_username = str(username).strip()
 
-    # Process Password Reset
+    # Process Password Reset if submitted
     if request.method == 'POST':
         new_password = request.form.get('new_password', '').strip()
         if new_password:
@@ -359,6 +405,7 @@ def view_member_ledger(username):
         else:
             flash('Password cannot be empty.', 'danger')
 
+    # Member Profile Info
     try:
         cur.execute("SELECT * FROM users WHERE LOWER(username) = LOWER(%s)", (target_username,))
         member_row = cur.fetchone()
@@ -367,6 +414,7 @@ def view_member_ledger(username):
         conn.rollback()
         member_data = {'username': target_username, 'full_name': target_username}
 
+    # Member Transactions
     try:
         cur.execute("SELECT * FROM transactions WHERE LOWER(username) = LOWER(%s) ORDER BY id DESC", (target_username,))
         transactions = cur.fetchall()
@@ -374,6 +422,7 @@ def view_member_ledger(username):
         conn.rollback()
         transactions = []
 
+    # Member Totals
     try:
         cur.execute("SELECT SUM(amount) AS total FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'approved'", (target_username,))
         res = cur.fetchone()
