@@ -13,6 +13,10 @@ def get_db_connection():
 
 
 # --- 3. ROUTES ---
+# --- ROOT HOME ROUTE ---
+@app.route('/')
+def home():
+    return redirect(url_for('login'))
 
 # --- LOGIN ROUTE ---
 @app.route('/login', methods=['GET', 'POST'])
