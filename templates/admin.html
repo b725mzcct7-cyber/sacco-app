@@ -28,7 +28,8 @@
             font-size: 14px;
         }
 
-        .btn-approve { background: #27ae60; color: white; padding: 7px 14px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold; }
+        .btn-approve { background: #27ae60; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold; }
+        .btn-delete { background: #e74c3c; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold; margin-left: 5px; }
         .btn-view { background: #1e3c72; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold; }
         .btn-add { background: #e67e22; color: white; padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; font-weight: bold; margin-left: 5px; }
         .btn-receipt { background: #8e44ad; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold; border: none; cursor: pointer; }
@@ -285,18 +286,21 @@
                             <td>{{ tx.date }}</td>
                             <td>UGX {{ "{:,.2f}".format(tx.amount) }}</td>
                             <td>
-                                {% if tx.status == 'approved' %}
+                                {% if tx.status|lower == 'approved' %}
                                     <span class="badge badge-success">Approved</span>
                                 {% else %}
                                     <span class="badge badge-warning">Pending</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if tx.status == 'pending' %}
-                                    <a href="/admin/approve_tx/{{ tx.id }}" class="btn-approve">Approve Deposit</a>
-                                {% else %}
-                                    <span style="color:#aaa; font-size:12px;">Done</span>
+                                {% if tx.status|lower == 'pending' %}
+                                    <a href="/admin/approve_tx/{{ tx.id }}" class="btn-approve">Approve</a>
                                 {% endif %}
+                                <a href="/admin/delete_tx/{{ tx.id }}" 
+                                   onclick="return confirm('Are you sure you want to delete transaction #{{ tx.id }}?');" 
+                                   class="btn-delete">
+                                   🗑️ Delete
+                                </a>
                             </td>
                         </tr>
                         {% endfor %}
