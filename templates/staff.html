@@ -159,7 +159,7 @@
                         <td>{{ tx.frequency }}</td>
                         <td>UGX {{ "{:,.2f}".format(tx.amount) }}</td>
                         <td>
-                            {% if tx.status == 'approved' %}
+                            {% if tx.status|lower == 'approved' %}
                                 <span class="badge badge-success">Approved</span>
                             {% else %}
                                 <span class="badge badge-warning">Pending Approval</span>
