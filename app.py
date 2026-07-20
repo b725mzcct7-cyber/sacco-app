@@ -23,7 +23,6 @@ def get_db_connection():
         
     return psycopg2.connect(url, cursor_factory=RealDictCursor)
 
-
 def init_db():
     try:
         conn = get_db_connection()
@@ -66,33 +65,23 @@ def init_db():
         
         conn.commit()
 
-        # --- AUTO-CREATE DEFAULT ADMIN & STAFF IF DATABASE IS EMPTY ---
-        cur.execute("SELECT COUNT(*) FROM users;")
-        user_count = cur.fetchone()['count']
-
-        if user_count == 0:
-            # Default Admin Account
-            cur.execute(
-                "INSERT INTO users (full_name, username, password, role, status) VALUES (%s, %s, %s, %s, %s)",
-                ('Administrator', 'admin', 'admin123', 'admin', 'approved')
-            )
-            # Default Staff Account
-            cur.execute(
-                "INSERT INTO users (full_name, username, password, role, status) VALUES (%s, %s, %s, %s, %s)",
-                ('Canan Bbosa', 'bbosa', 'staff123', 'staff', 'approved')
-            )
-            conn.commit()
-            print("Default admin and staff accounts seeded into empty database!")
-
+        # --- GUARANTEE ADMIN ACCOUNT EXISTS ---
+        cur.execute('''
+            INSERT INTO users (full_name, username, password, role, status)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (username) 
+            DO UPDATE SET password = EXCLUDED.password, role = EXCLUDED.role, status = EXCLUDED.status;
+        ''', ('Administrator', 'admin', 'admin123', 'admin', 'approved'))
+        
+        conn.commit()
         cur.close()
         conn.close()
-        print("PostgreSQL Database connected & tables verified successfully.")
+        print("Admin user verified and forced into PostgreSQL!")
     except Exception as e:
         print("Database initialization notice/error:", e)
 
 # Run database setup safely on app boot
 init_db()
-
 
 # --- 3. ROUTES ---
 
