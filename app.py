@@ -10,16 +10,20 @@ def login():
         conn.close()
         
         if user:
+            # Convert SQLite Row to dict safely for session storage
+            user_dict = dict(user)
+            
             # Safely get status and role
-            role = user['role'] if 'role' in user.keys() else 'staff'
-            status = str(user['status']).lower() if 'status' in user.keys() and user['status'] else 'approved'
+            role = user_dict.get('role', 'staff')
+            raw_status = user_dict.get('status')
+            status = str(raw_status).lower() if raw_status else 'approved'
             
             if role == 'admin':
-                session['user'] = dict(user)
+                session['user'] = user_dict
                 return redirect(url_for('admin_dashboard'))
             
             if status == 'approved':
-                session['user'] = dict(user)
+                session['user'] = user_dict
                 return redirect(url_for('staff_dashboard'))
             else:
                 flash('Your account is pending admin approval.', 'warning')
@@ -29,6 +33,44 @@ def login():
             return redirect(url_for('login'))
             
     return render_template('login.html')
+
+
+# --- STAFF DASHBOARD ROUTE ---
+@app.route('/dashboard')
+@app.route('/staff_dashboard')
+def staff_dashboard():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+        
+    user = session['user']
+    username = user.get('username')
+    
+    conn = get_db_connection()
+    
+    try:
+        user_txs = conn.execute('SELECT * FROM transactions WHERE username = ? ORDER BY id DESC', (username,)).fetchall()
+    except Exception:
+        user_txs = []
+        
+    try:
+        approved_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE username = ? AND LOWER(status) = 'approved'", (username,)).fetchone()[0]
+        total_approved = approved_val if approved_val else 0
+    except Exception:
+        total_approved = 0
+
+    try:
+        pending_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE username = ? AND LOWER(status) = 'pending'", (username,)).fetchone()[0]
+        total_pending = pending_val if pending_val else 0
+    except Exception:
+        total_pending = 0
+
+    conn.close()
+    
+    return render_template('staff.html', 
+                           user=user, 
+                           transactions=user_txs, 
+                           total_approved=total_approved, 
+                           total_pending=total_pending)
 
 
 # --- ADMIN DASHBOARD ROUTE ---
@@ -41,12 +83,12 @@ def admin_dashboard():
     
     # Safely fetch pending & staff users
     try:
-        pending_users = conn.execute("SELECT * FROM users WHERE LOWER(status) = 'pending' AND role != 'admin'").fetchall()
+        pending_users = conn.execute("SELECT * FROM users WHERE LOWER(status) = 'pending' AND (role != 'admin' OR role IS NULL)").fetchall()
     except Exception:
         pending_users = []
         
     try:
-        staff_list = conn.execute("SELECT * FROM users WHERE (LOWER(status) = 'approved' OR status IS NULL) AND role != 'admin'").fetchall()
+        staff_list = conn.execute("SELECT * FROM users WHERE (LOWER(status) = 'approved' OR status IS NULL) AND (role != 'admin' OR role IS NULL)").fetchall()
     except Exception:
         staff_list = []
 
@@ -94,6 +136,21 @@ def admin_dashboard():
                            total_paid_out=total_paid_out,
                            reserve_vault=reserve_vault,
                            payout_history=payout_history)
+
+
+# --- APPROVE USER / STAFF ROUTE ---
+@app.route('/admin/approve_user/<username>')
+def approve_user(username):
+    if 'user' not in session or session['user'].get('role') != 'admin':
+        return redirect(url_for('login'))
+        
+    conn = get_db_connection()
+    conn.execute("UPDATE users SET status = 'approved' WHERE username = ?", (username,))
+    conn.commit()
+    conn.close()
+    
+    flash(f'Account for {username} has been approved!', 'success')
+    return redirect(url_for('admin_dashboard'))
 
 
 # --- APPROVE TRANSACTION ---
