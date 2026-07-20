@@ -1,3 +1,19 @@
+import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+
+# 1. INITIALIZE FLASK (This MUST be defined before any @app.route!)
+app = Flask(__name__)
+app.secret_key = 'sacco_secret_key_here'
+
+# 2. DATABASE HELPER
+def get_db_connection():
+    conn = sqlite3.connect('sacco.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+# --- 3. ROUTES ---
+
 # --- LOGIN ROUTE ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -6,14 +22,11 @@ def login():
         password = request.form.get('password')
         
         conn = get_db_connection()
-        user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password)).fetchone()
+        user_row = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password)).fetchone()
         conn.close()
         
-        if user:
-            # Convert SQLite Row to dict safely for session storage
-            user_dict = dict(user)
-            
-            # Safely get status and role
+        if user_row:
+            user_dict = dict(user_row)
             role = user_dict.get('role', 'staff')
             raw_status = user_dict.get('status')
             status = str(raw_status).lower() if raw_status else 'approved'
@@ -42,8 +55,8 @@ def staff_dashboard():
     if 'user' not in session:
         return redirect(url_for('login'))
         
-    user = session['user']
-    username = user.get('username')
+    user = session.get('user', {})
+    username = user.get('username', '')
     
     conn = get_db_connection()
     
@@ -81,7 +94,6 @@ def admin_dashboard():
         
     conn = get_db_connection()
     
-    # Safely fetch pending & staff users
     try:
         pending_users = conn.execute("SELECT * FROM users WHERE LOWER(status) = 'pending' AND (role != 'admin' OR role IS NULL)").fetchall()
     except Exception:
@@ -92,13 +104,11 @@ def admin_dashboard():
     except Exception:
         staff_list = []
 
-    # Safely fetch transactions
     try:
         transactions = conn.execute("SELECT * FROM transactions ORDER BY id DESC").fetchall()
     except Exception:
         transactions = []
 
-    # Financial Stats (safely handle NULL / empty sums)
     try:
         approved_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(status) = 'approved'").fetchone()[0]
         approved = approved_val if approved_val else 0
@@ -111,7 +121,6 @@ def admin_dashboard():
     except Exception:
         pending = 0
 
-    # Safely fetch payout history and vault totals if columns exist
     try:
         payout_history = conn.execute("SELECT * FROM payouts ORDER BY id DESC").fetchall()
     except Exception:
@@ -168,7 +177,7 @@ def approve_tx(tx_id):
     return redirect(url_for('admin_dashboard'))
 
 
-# --- SAFE DELETE TRANSACTION ---
+# --- DELETE TRANSACTION ---
 @app.route('/admin/delete_tx/<int:tx_id>')
 def delete_tx(tx_id):
     if 'user' not in session or session['user'].get('role') != 'admin':
@@ -180,7 +189,12 @@ def delete_tx(tx_id):
         conn.commit()
         conn.close()
         flash(f'Transaction #{tx_id} deleted permanently!', 'danger')
-    except Exception as e:
+    except Exception:
         flash('Could not delete transaction.', 'warning')
         
     return redirect(url_for('admin_dashboard'))
+
+
+# --- APP RUNNER (FOR LOCAL TESTING) ---
+if __name__ == '__main__':
+    app.run(debug=True)
