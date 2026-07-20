@@ -226,17 +226,24 @@ def staff_dashboard():
         conn.rollback()
         user_txs = []
 
-    # Calculate User Totals
+    # Calculate User Approved Total (Fixed to match any variation of 'approved')
     try:
-        cur.execute("SELECT SUM(amount) AS total FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'approved'", (username,))
+        cur.execute(
+            "SELECT SUM(amount) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'approved'", 
+            (username,)
+        )
         res = cur.fetchone()
         total_approved = float(res['total']) if res and res['total'] is not None else 0.0
     except Exception:
         conn.rollback()
         total_approved = 0.0
 
+    # Calculate User Pending Total
     try:
-        cur.execute("SELECT SUM(amount) AS total FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'pending'", (username,))
+        cur.execute(
+            "SELECT SUM(amount) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'pending'", 
+            (username,)
+        )
         res = cur.fetchone()
         total_pending = float(res['total']) if res and res['total'] is not None else 0.0
     except Exception:
@@ -253,7 +260,6 @@ def staff_dashboard():
         total_approved=total_approved, 
         total_pending=total_pending
     )
-
 
 # --- DEPOSIT / PAYMENT ROUTE REDIRECT ---
 @app.route('/deposit', methods=['GET', 'POST'])
