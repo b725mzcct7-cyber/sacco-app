@@ -14,7 +14,7 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
-    # Ensure all standard tables exist
+    # Ensure standard tables exist
     conn.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,7 +47,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Automatically set up database tables at launch
+# Initialize tables when starting up
 init_db()
 
 
@@ -59,7 +59,7 @@ def home():
     return redirect(url_for('login'))
 
 
-# --- LOGIN ROUTE ---
+# --- LOGIN ROUTE (FIXED) ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -67,7 +67,7 @@ def login():
         password = request.form.get('password', '').strip()
         
         conn = get_db_connection()
-        # Case-insensitive username lookup
+        # Case-insensitive username check
         user_row = conn.execute(
             'SELECT * FROM users WHERE LOWER(username) = LOWER(?) AND password = ?', 
             (username, password)
@@ -85,7 +85,7 @@ def login():
                 session['user'] = user_dict
                 return redirect(url_for('admin_dashboard'))
             
-            # Staff Login
+            # Staff Login (Allows 'approved', 'none', or 'null')
             if status in ['approved', 'none', 'null']:
                 session['user'] = user_dict
                 return redirect(url_for('staff_dashboard'))
@@ -305,28 +305,15 @@ def admin_dashboard():
     )
 
 
-# --- ADMIN MEMBER LEDGER & PASSWORD RESET ROUTE ---
-@app.route('/admin/member/<username>', methods=['GET', 'POST'])
-@app.route('/ledger/<username>', methods=['GET', 'POST'])
+# --- ADMIN MEMBER LEDGER VIEW ROUTE (FIXED) ---
+@app.route('/admin/member/<username>')
+@app.route('/ledger/<username>')
 def view_member_ledger(username):
     if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
         return redirect(url_for('login'))
 
     conn = get_db_connection()
     
-    # Process password reset if form is submitted
-    if request.method == 'POST':
-        new_password = request.form.get('new_password', '').strip()
-        if new_password:
-            conn.execute(
-                "UPDATE users SET password = ? WHERE LOWER(username) = LOWER(?)", 
-                (new_password, username)
-            )
-            conn.commit()
-            flash(f'Password for {username} updated successfully!', 'success')
-        else:
-            flash('Password cannot be empty.', 'danger')
-
     member_row = conn.execute("SELECT * FROM users WHERE LOWER(username) = LOWER(?)", (username,)).fetchone()
     member_data = dict(member_row) if member_row else {'username': username}
 
@@ -352,7 +339,7 @@ def view_member_ledger(username):
             "SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(?) AND LOWER(status) = 'pending'", 
             (username,)
         ).fetchone()[0]
-        pending_total = pending_val if pending_val else 0
+        pending_total = pending_val if pending_total else 0
     except Exception:
         pending_total = 0
 
