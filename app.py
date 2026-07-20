@@ -168,16 +168,19 @@ def approve_tx(tx_id):
     return redirect(url_for('admin_dashboard'))
 
 
-# --- DELETE TRANSACTION ---
+# --- SAFE DELETE TRANSACTION ---
 @app.route('/admin/delete_tx/<int:tx_id>')
 def delete_tx(tx_id):
     if 'user' not in session or session['user'].get('role') != 'admin':
         return redirect(url_for('login'))
         
-    conn = get_db_connection()
-    conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
-    conn.commit()
-    conn.close()
-    
-    flash(f'Transaction #{tx_id} deleted permanently!', 'danger')
+    try:
+        conn = get_db_connection()
+        conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
+        conn.commit()
+        conn.close()
+        flash(f'Transaction #{tx_id} deleted permanently!', 'danger')
+    except Exception as e:
+        flash('Could not delete transaction.', 'warning')
+        
     return redirect(url_for('admin_dashboard'))

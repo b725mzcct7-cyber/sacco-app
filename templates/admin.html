@@ -261,54 +261,58 @@
             </table>
         </div>
 
-        <!-- Member Payments -->
-        <div class="card">
-            <h4>All Member Payments & Deposit Transactions</h4>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Member</th>
-                        <th>Frequency</th>
-                        <th>Date</th>
-                        <th>Amount (UGX)</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if transactions is defined %}
-                        {% for tx in transactions %}
-                        <tr>
-                            <td>#{{ tx.id }}</td>
-                            <td>{{ tx.username }}</td>
-                            <td>{{ tx.frequency }}</td>
-                            <td>{{ tx.date }}</td>
-                            <td>UGX {{ "{:,.2f}".format(tx.amount) }}</td>
-                            <td>
-                                {% if tx.status|lower == 'approved' %}
-                                    <span class="badge badge-success">Approved</span>
-                                {% else %}
-                                    <span class="badge badge-warning">Pending</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if tx.status|lower == 'pending' %}
-                                    <a href="/admin/approve_tx/{{ tx.id }}" class="btn-approve">Approve</a>
-                                {% endif %}
-                                <a href="/admin/delete_tx/{{ tx.id }}" 
-                                   onclick="return confirm('Are you sure you want to delete transaction #{{ tx.id }}?');" 
-                                   class="btn-delete">
-                                   🗑️ Delete
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+       <!-- Member Payments -->
+<div class="card">
+    <h4>All Member Payments & Deposit Transactions</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Member</th>
+                <th>Frequency</th>
+                <th>Date</th>
+                <th>Amount (UGX)</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if transactions is defined and transactions %}
+                {% for tx in transactions %}
+                <tr>
+                    <td>#{{ tx['id'] if tx['id'] is defined else tx.id }}</td>
+                    <td>{{ tx['username'] if tx['username'] is defined else tx.username }}</td>
+                    <td>{{ tx['frequency'] if tx['frequency'] is defined else tx.frequency }}</td>
+                    <td>{{ tx['date'] if tx['date'] is defined else tx.date }}</td>
+                    <td>UGX {{ "{:,.2f}".format(tx['amount'] if tx['amount'] is defined else tx.amount) }}</td>
+                    <td>
+                        {% set status_val = (tx['status'] if tx['status'] is defined else tx.status)|string|lower %}
+                        {% if status_val == 'approved' %}
+                            <span class="badge badge-success">Approved</span>
+                        {% else %}
+                            <span class="badge badge-warning">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if status_val == 'pending' %}
+                            <a href="/admin/approve_tx/{{ tx['id'] if tx['id'] is defined else tx.id }}" class="btn-approve">Approve</a>
+                        {% endif %}
+                        <a href="/admin/delete_tx/{{ tx['id'] if tx['id'] is defined else tx.id }}" 
+                           onclick="return confirm('Are you sure you want to delete this transaction?');" 
+                           class="btn-delete">
+                           🗑️ Delete
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #888;">No transactions recorded yet.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
 
     <script>
         function filterStaff() {
