@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SACCO - Login</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .card { background: white; padding: 35px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 360px; }
+        .card h2 { color: #1e3c72; text-align: center; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { font-size: 13px; font-weight: 600; margin-bottom: 5px; display: block; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .btn { width: 100%; padding: 11px; background: #1e3c72; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn:hover { background: #2a5298; }
+        .links { margin-top: 15px; font-size: 13px; text-align: center; display: flex; justify-content: space-between; }
+        .links a { color: #1e3c72; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>SACCO Portal</h2>
+        <form method="POST">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required>
+            </div>
+            <button type="submit" class="btn">Login</button>
+        </form>
+        <div class="links">
+            <a href="/forgot_password" style="color: #e67e22;">Forgot Password?</a>
+            <a href="/signup">Register Account</a>
+        </div>
+    </div>
+</body>
+</html>

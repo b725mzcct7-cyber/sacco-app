@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SACCO Registration</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .card { background: #ffffff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 480px; padding: 35px; }
+        .card h2 { color: #1e3c72; margin-bottom: 8px; font-size: 24px; text-align: center; }
+        .card p.subtitle { color: #666; font-size: 13px; margin-bottom: 20px; text-align: center; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 5px; display: block; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .btn { width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; margin-top: 10px; }
+        .btn:hover { background: #219150; }
+        .footer-link { margin-top: 18px; font-size: 13px; color: #555; text-align: center; display: flex; justify-content: space-around; }
+        .footer-link a { color: #1e3c72; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Member Registration</h2>
+        <p class="subtitle">Complete registration for Admin verification</p>
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="full_name" placeholder="John Doe" required>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="text" name="phone" placeholder="0770000000" required>
+                </div>
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    <input type="date" name="dob" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>National ID No. (NIN)</label>
+                <input type="text" name="national_id" placeholder="CM1234567890AB" required>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" placeholder="Choose username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" placeholder="••••••••" required>
+                </div>
+            </div>
+            <button type="submit" class="btn">Submit Application</button>
+        </form>
+
+        <div class="footer-link">
+            <a href="/login">Back to Login</a>
+            <a href="/forgot_password" style="color: #e67e22;">Forgot Password?</a>
+        </div>
+    </div>
+</body>
+</html>
