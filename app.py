@@ -1,9 +1,10 @@
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 
-# 1. INITIALIZE FLASK (This MUST be defined before any @app.route!)
+# 1. INITIALIZE FLASK
 app = Flask(__name__)
 app.secret_key = 'sacco_secret_key_here'
+
 
 # 2. DATABASE HELPER
 def get_db_connection():
@@ -13,10 +14,12 @@ def get_db_connection():
 
 
 # --- 3. ROUTES ---
+
 # --- ROOT HOME ROUTE ---
 @app.route('/')
 def home():
     return redirect(url_for('login'))
+
 
 # --- LOGIN ROUTE ---
 @app.route('/login', methods=['GET', 'POST'])
@@ -50,6 +53,8 @@ def login():
             return redirect(url_for('login'))
             
     return render_template('login.html')
+
+
 # --- REGISTER / SIGNUP ROUTE ---
 @app.route('/register', methods=['GET', 'POST'])
 @app.route('/signup', methods=['GET', 'POST'])
@@ -65,14 +70,12 @@ def register():
             
         conn = get_db_connection()
         
-        # Check if username already exists
         existing_user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
         if existing_user:
             conn.close()
             flash('Username already exists. Please choose another or login.', 'warning')
             return redirect(url_for('register'))
             
-        # Insert new staff member (defaulting role to "staff" and status to "pending")
         try:
             conn.execute(
                 'INSERT INTO users (full_name, username, password, role, status) VALUES (?, ?, ?, ?, ?)',
@@ -82,9 +85,8 @@ def register():
             conn.close()
             flash('Registration successful! Your account is pending admin approval.', 'success')
             return redirect(url_for('login'))
-        except Exception as e:
+        except Exception:
             conn.close()
-            # Fallback if full_name column doesn't exist in old table schema
             try:
                 conn = get_db_connection()
                 conn.execute(
@@ -95,7 +97,7 @@ def register():
                 conn.close()
                 flash('Registration successful! Your account is pending admin approval.', 'success')
                 return redirect(url_for('login'))
-            except Exception as inner_e:
+            except Exception:
                 flash('Error creating account. Please try again or contact administrator.', 'danger')
                 return redirect(url_for('register'))
 
@@ -138,6 +140,43 @@ def staff_dashboard():
                            transactions=user_txs, 
                            total_approved=total_approved, 
                            total_pending=total_pending)
+
+
+# --- STAFF DEPOSIT / PAYMENT ROUTE ---
+@app.route('/deposit', methods=['GET', 'POST'])
+@app.route('/make_payment', methods=['GET', 'POST'])
+def make_payment():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        amount = request.form.get('amount')
+        frequency = request.form.get('frequency', 'Monthly')
+        date_str = request.form.get('date')
+        
+        user = session.get('user', {})
+        username = user.get('username')
+
+        if not amount or float(amount) <= 0:
+            flash('Please enter a valid deposit amount.', 'danger')
+            return redirect(url_for('staff_dashboard'))
+
+        conn = get_db_connection()
+        try:
+            conn.execute(
+                "INSERT INTO transactions (username, amount, frequency, date, status) VALUES (?, ?, ?, ?, ?)",
+                (username, float(amount), frequency, date_str, 'pending')
+            )
+            conn.commit()
+            flash('Deposit submitted successfully! Awaiting admin approval.', 'success')
+        except Exception:
+            flash('Failed to submit deposit. Please try again.', 'danger')
+        finally:
+            conn.close()
+
+        return redirect(url_for('staff_dashboard'))
+
+    return redirect(url_for('staff_dashboard'))
 
 
 # --- ADMIN DASHBOARD ROUTE ---
@@ -201,6 +240,45 @@ def admin_dashboard():
                            payout_history=payout_history)
 
 
+# --- ADMIN MEMBER LEDGER VIEW ROUTE ---
+@app.route('/admin/member/<username>')
+@app.route('/ledger/<username>')
+def view_member_ledger(username):
+    if 'user' not in session or session['user'].get('role') != 'admin':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    
+    member = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    
+    try:
+        transactions = conn.execute("SELECT * FROM transactions WHERE username = ? ORDER BY id DESC", (username,)).fetchall()
+    except Exception:
+        transactions = []
+    
+    try:
+        approved_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE username = ? AND LOWER(status) = 'approved'", (username,)).fetchone()[0]
+        approved_total = approved_val if approved_val else 0
+    except Exception:
+        approved_total = 0
+
+    try:
+        pending_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE username = ? AND LOWER(status) = 'pending'", (username,)).fetchone()[0]
+        pending_total = pending_val if pending_val else 0
+    except Exception:
+        pending_total = 0
+
+    conn.close()
+
+    return render_template(
+        'member_detail.html', 
+        member=dict(member) if member else {'username': username}, 
+        transactions=transactions, 
+        approved_total=approved_total,
+        pending_total=pending_total
+    )
+
+
 # --- APPROVE USER / STAFF ROUTE ---
 @app.route('/admin/approve_user/<username>')
 def approve_user(username):
@@ -216,7 +294,7 @@ def approve_user(username):
     return redirect(url_for('admin_dashboard'))
 
 
-# --- APPROVE TRANSACTION ---
+# --- APPROVE TRANSACTION ROUTE ---
 @app.route('/admin/approve_tx/<int:tx_id>')
 def approve_tx(tx_id):
     if 'user' not in session or session['user'].get('role') != 'admin':
@@ -231,7 +309,7 @@ def approve_tx(tx_id):
     return redirect(url_for('admin_dashboard'))
 
 
-# --- DELETE TRANSACTION ---
+# --- DELETE TRANSACTION ROUTE ---
 @app.route('/admin/delete_tx/<int:tx_id>')
 def delete_tx(tx_id):
     if 'user' not in session or session['user'].get('role') != 'admin':
@@ -247,6 +325,14 @@ def delete_tx(tx_id):
         flash('Could not delete transaction.', 'warning')
         
     return redirect(url_for('admin_dashboard'))
+
+
+# --- LOGOUT ROUTE ---
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out successfully.', 'info')
+    return redirect(url_for('login'))
 
 
 # --- APP RUNNER (FOR LOCAL TESTING) ---
