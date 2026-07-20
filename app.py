@@ -29,7 +29,7 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Users Table
+        # 1. Users Table
         cur.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -41,7 +41,7 @@ def init_db():
             );
         ''')
         
-        # Transactions Table
+        # 2. Transactions Table
         cur.execute('''
             CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY,
@@ -53,7 +53,7 @@ def init_db():
             );
         ''')
         
-        # Payouts Table
+        # 3. Payouts Table
         cur.execute('''
             CREATE TABLE IF NOT EXISTS payouts (
                 id SERIAL PRIMARY KEY,
@@ -65,6 +65,25 @@ def init_db():
         ''')
         
         conn.commit()
+
+        # --- AUTO-CREATE DEFAULT ADMIN & STAFF IF DATABASE IS EMPTY ---
+        cur.execute("SELECT COUNT(*) FROM users;")
+        user_count = cur.fetchone()['count']
+
+        if user_count == 0:
+            # Default Admin Account
+            cur.execute(
+                "INSERT INTO users (full_name, username, password, role, status) VALUES (%s, %s, %s, %s, %s)",
+                ('Administrator', 'admin', 'admin123', 'admin', 'approved')
+            )
+            # Default Staff Account
+            cur.execute(
+                "INSERT INTO users (full_name, username, password, role, status) VALUES (%s, %s, %s, %s, %s)",
+                ('Canan Bbosa', 'bbosa', 'staff123', 'staff', 'approved')
+            )
+            conn.commit()
+            print("Default admin and staff accounts seeded into empty database!")
+
         cur.close()
         conn.close()
         print("PostgreSQL Database connected & tables verified successfully.")
@@ -168,7 +187,7 @@ def register():
     return render_template('signup.html')
 
 
-# --- STAFF DASHBOARD (HANDLES BOTH VIEWING AND SUBMITTING DEPOSITS) ---
+# --- STAFF DASHBOARD (VIEW TRANSACTIONS & SUBMIT DEPOSITS) ---
 @app.route('/dashboard', methods=['GET', 'POST'])
 @app.route('/staff_dashboard', methods=['GET', 'POST'])
 def staff_dashboard():
@@ -291,7 +310,7 @@ def view_member_ledger(username):
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Process Password Reset if submitted
+    # Process Password Reset if submitted from member page
     if request.method == 'POST':
         new_password = request.form.get('new_password', '').strip()
         if new_password:
