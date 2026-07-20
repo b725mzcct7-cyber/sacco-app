@@ -1,65 +1,81 @@
-import sqlite3
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 
 # 1. INITIALIZE FLASK
 app = Flask(__name__)
 app.secret_key = 'sacco_secret_key_here'
 
+# Database connection URL from Render environment variables
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
 
 # 2. DATABASE HELPER & INITIALIZATION
 def get_db_connection():
-    conn = sqlite3.connect('sacco.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+    # Fixes 'postgres://' issue if Render provides an older format
+    url = DATABASE_URL
+    if url and url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return psycopg2.connect(url, cursor_factory=RealDictCursor)
 
 def init_db():
-    conn = get_db_connection()
-    # Ensure standard tables exist
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            full_name TEXT,
-            username TEXT UNIQUE,
-            password TEXT,
-            role TEXT,
-            status TEXT
-        )
-    ''')
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT,
-            amount REAL,
-            frequency TEXT,
-            date TEXT,
-            status TEXT
-        )
-    ''')
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS payouts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT,
-            amount REAL,
-            date TEXT,
-            notes TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Create users table
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                full_name TEXT,
+                username TEXT UNIQUE,
+                password TEXT,
+                role TEXT,
+                status TEXT
+            );
+        ''')
+        
+        # Create transactions table
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS transactions (
+                id SERIAL PRIMARY KEY,
+                username TEXT,
+                amount NUMERIC,
+                frequency TEXT,
+                date TEXT,
+                status TEXT
+            );
+        ''')
+        
+        # Create payouts table
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS payouts (
+                id SERIAL PRIMARY KEY,
+                username TEXT,
+                amount NUMERIC,
+                date TEXT,
+                notes TEXT
+            );
+        ''')
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print("Database init error:", e)
 
-# Initialize tables when starting up
 init_db()
 
 
 # --- 3. ROUTES ---
 
-# --- ROOT HOME ROUTE ---
 @app.route('/')
 def home():
     return redirect(url_for('login'))
 
 
-# --- LOGIN ROUTE (FIXED) ---
+# --- LOGIN ROUTE ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -67,11 +83,13 @@ def login():
         password = request.form.get('password', '').strip()
         
         conn = get_db_connection()
-        # Case-insensitive username check
-        user_row = conn.execute(
-            'SELECT * FROM users WHERE LOWER(username) = LOWER(?) AND password = ?', 
+        cur = conn.cursor()
+        cur.execute(
+            'SELECT * FROM users WHERE LOWER(username) = LOWER(%s) AND password = %s', 
             (username, password)
-        ).fetchone()
+        )
+        user_row = cur.fetchone()
+        cur.close()
         conn.close()
         
         if user_row:
@@ -80,12 +98,10 @@ def login():
             raw_status = user_dict.get('status')
             status = str(raw_status).lower() if raw_status else 'approved'
             
-            # Admin Login
             if role == 'admin':
                 session['user'] = user_dict
                 return redirect(url_for('admin_dashboard'))
             
-            # Staff Login (Allows 'approved', 'none', or 'null')
             if status in ['approved', 'none', 'null']:
                 session['user'] = user_dict
                 return redirect(url_for('staff_dashboard'))
@@ -99,7 +115,7 @@ def login():
     return render_template('login.html')
 
 
-# --- REGISTER / SIGNUP ROUTE ---
+# --- REGISTER ROUTE ---
 @app.route('/register', methods=['GET', 'POST'])
 @app.route('/signup', methods=['GET', 'POST'])
 def register():
@@ -113,48 +129,37 @@ def register():
             return redirect(url_for('register'))
             
         conn = get_db_connection()
+        cur = conn.cursor()
         
-        existing_user = conn.execute(
-            'SELECT * FROM users WHERE LOWER(username) = LOWER(?)', 
-            (username,)
-        ).fetchone()
+        cur.execute('SELECT * FROM users WHERE LOWER(username) = LOWER(%s)', (username,))
+        existing_user = cur.fetchone()
         
         if existing_user:
+            cur.close()
             conn.close()
             flash('Username already exists. Please choose another or login.', 'warning')
             return redirect(url_for('register'))
             
         try:
-            conn.execute(
-                'INSERT INTO users (full_name, username, password, role, status) VALUES (?, ?, ?, ?, ?)',
+            cur.execute(
+                'INSERT INTO users (full_name, username, password, role, status) VALUES (%s, %s, %s, %s, %s)',
                 (full_name, username, password, 'staff', 'pending')
             )
             conn.commit()
-            conn.close()
-            flash('Registration successful! Your account is pending admin approval.', 'success')
+            flash('Registration successful! Pending admin approval.', 'success')
             return redirect(url_for('login'))
-        except Exception:
+        except Exception as e:
+            flash(f'Error creating account: {e}', 'danger')
+        finally:
+            cur.close()
             conn.close()
-            try:
-                conn = get_db_connection()
-                conn.execute(
-                    'INSERT INTO users (username, password, role, status) VALUES (?, ?, ?, ?)',
-                    (username, password, 'staff', 'pending')
-                )
-                conn.commit()
-                conn.close()
-                flash('Registration successful! Your account is pending admin approval.', 'success')
-                return redirect(url_for('login'))
-            except Exception:
-                flash('Error creating account. Please try again or contact administrator.', 'danger')
-                return redirect(url_for('register'))
 
     return render_template('signup.html')
 
 
-# --- STAFF DASHBOARD ROUTE ---
-@app.route('/dashboard')
-@app.route('/staff_dashboard')
+# --- STAFF DASHBOARD ROUTE (NOW ACCEPTS POST FOR DEPOSITS) ---
+@app.route('/dashboard', methods=['GET', 'POST'])
+@app.route('/staff_dashboard', methods=['GET', 'POST'])
 def staff_dashboard():
     if 'user' not in session:
         return redirect(url_for('login'))
@@ -163,33 +168,39 @@ def staff_dashboard():
     username = user.get('username', '')
     
     conn = get_db_connection()
-    
-    try:
-        user_txs = conn.execute(
-            'SELECT * FROM transactions WHERE LOWER(username) = LOWER(?) ORDER BY id DESC', 
-            (username,)
-        ).fetchall()
-    except Exception:
-        user_txs = []
+    cur = conn.cursor()
+
+    # Handle deposit submitted directly to this route
+    if request.method == 'POST':
+        amount = request.form.get('amount')
+        frequency = request.form.get('frequency', 'Monthly')
+        date_str = request.form.get('date')
+
+        if amount and float(amount) > 0:
+            cur.execute(
+                "INSERT INTO transactions (username, amount, frequency, date, status) VALUES (%s, %s, %s, %s, %s)",
+                (username, float(amount), frequency, date_str, 'pending')
+            )
+            conn.commit()
+            flash('Deposit submitted successfully! Awaiting admin approval.', 'success')
+        else:
+            flash('Please enter a valid deposit amount.', 'danger')
+        return redirect(url_for('staff_dashboard'))
+
+    # Fetch User Transactions
+    cur.execute('SELECT * FROM transactions WHERE LOWER(username) = LOWER(%s) ORDER BY id DESC', (username,))
+    user_txs = cur.fetchall()
         
-    try:
-        approved_val = conn.execute(
-            "SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(?) AND LOWER(status) = 'approved'", 
-            (username,)
-        ).fetchone()[0]
-        total_approved = approved_val if approved_val else 0
-    except Exception:
-        total_approved = 0
+    # Fetch Totals
+    cur.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'approved'", (username,))
+    approved_val = cur.fetchone()['sum']
+    total_approved = approved_val if approved_val else 0
 
-    try:
-        pending_val = conn.execute(
-            "SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(?) AND LOWER(status) = 'pending'", 
-            (username,)
-        ).fetchone()[0]
-        total_pending = pending_val if pending_val else 0
-    except Exception:
-        total_pending = 0
+    cur.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'pending'", (username,))
+    pending_val = cur.fetchone()['sum']
+    total_pending = pending_val if pending_val else 0
 
+    cur.close()
     conn.close()
     
     return render_template(
@@ -201,95 +212,49 @@ def staff_dashboard():
     )
 
 
-# --- STAFF DEPOSIT / PAYMENT ROUTE ---
+# --- DEPOSIT / PAYMENT ROUTE ---
 @app.route('/deposit', methods=['GET', 'POST'])
 @app.route('/make_payment', methods=['GET', 'POST'])
 def make_payment():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-
-    if request.method == 'POST':
-        amount = request.form.get('amount')
-        frequency = request.form.get('frequency', 'Monthly')
-        date_str = request.form.get('date')
-        
-        user = session.get('user', {})
-        username = user.get('username')
-
-        if not amount or float(amount) <= 0:
-            flash('Please enter a valid deposit amount.', 'danger')
-            return redirect(url_for('staff_dashboard'))
-
-        conn = get_db_connection()
-        try:
-            conn.execute(
-                "INSERT INTO transactions (username, amount, frequency, date, status) VALUES (?, ?, ?, ?, ?)",
-                (username, float(amount), frequency, date_str, 'pending')
-            )
-            conn.commit()
-            flash('Deposit submitted successfully! Awaiting admin approval.', 'success')
-        except Exception:
-            flash('Failed to submit deposit. Please try again.', 'danger')
-        finally:
-            conn.close()
-
-        return redirect(url_for('staff_dashboard'))
-
-    return redirect(url_for('staff_dashboard'))
+    return staff_dashboard()
 
 
-# --- ADMIN DASHBOARD ROUTE ---
+# --- ADMIN DASHBOARD ---
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_dashboard():
     if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
         return redirect(url_for('login'))
         
     conn = get_db_connection()
+    cur = conn.cursor()
     
-    try:
-        pending_users = conn.execute(
-            "SELECT * FROM users WHERE LOWER(status) = 'pending' AND (LOWER(role) != 'admin' OR role IS NULL)"
-        ).fetchall()
-    except Exception:
-        pending_users = []
+    cur.execute("SELECT * FROM users WHERE LOWER(status) = 'pending' AND (LOWER(role) != 'admin' OR role IS NULL)")
+    pending_users = cur.fetchall()
         
-    try:
-        staff_list = conn.execute(
-            "SELECT * FROM users WHERE (LOWER(status) = 'approved' OR status IS NULL) AND (LOWER(role) != 'admin' OR role IS NULL)"
-        ).fetchall()
-    except Exception:
-        staff_list = []
+    cur.execute("SELECT * FROM users WHERE (LOWER(status) = 'approved' OR status IS NULL) AND (LOWER(role) != 'admin' OR role IS NULL)")
+    staff_list = cur.fetchall()
 
-    try:
-        transactions = conn.execute("SELECT * FROM transactions ORDER BY id DESC").fetchall()
-    except Exception:
-        transactions = []
+    cur.execute("SELECT * FROM transactions ORDER BY id DESC")
+    transactions = cur.fetchall()
 
-    try:
-        approved_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(status) = 'approved'").fetchone()[0]
-        approved = approved_val if approved_val else 0
-    except Exception:
-        approved = 0
+    cur.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(status) = 'approved'")
+    approved_val = cur.fetchone()['sum']
+    approved = approved_val if approved_val else 0
 
-    try:
-        pending_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(status) = 'pending'").fetchone()[0]
-        pending = pending_val if pending_val else 0
-    except Exception:
-        pending = 0
+    cur.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(status) = 'pending'")
+    pending_val = cur.fetchone()['sum']
+    pending = pending_val if pending_val else 0
 
-    try:
-        payout_history = conn.execute("SELECT * FROM payouts ORDER BY id DESC").fetchall()
-    except Exception:
-        payout_history = []
+    cur.execute("SELECT * FROM payouts ORDER BY id DESC")
+    payout_history = cur.fetchall()
 
-    try:
-        total_paid_out_val = conn.execute("SELECT SUM(amount) FROM payouts").fetchone()[0]
-        total_paid_out = total_paid_out_val if total_paid_out_val else 0
-    except Exception:
-        total_paid_out = 0
+    cur.execute("SELECT SUM(amount) FROM payouts")
+    total_paid_out_val = cur.fetchone()['sum']
+    total_paid_out = total_paid_out_val if total_paid_out_val else 0
 
-    reserve_vault = approved - total_paid_out
+    reserve_vault = float(approved) - float(total_paid_out)
     
+    cur.close()
     conn.close()
     
     return render_template(
@@ -305,44 +270,42 @@ def admin_dashboard():
     )
 
 
-# --- ADMIN MEMBER LEDGER VIEW ROUTE (FIXED) ---
-@app.route('/admin/member/<username>')
-@app.route('/ledger/<username>')
+# --- ADMIN MEMBER LEDGER & PASSWORD RESET ROUTE ---
+@app.route('/admin/member/<username>', methods=['GET', 'POST'])
+@app.route('/ledger/<username>', methods=['GET', 'POST'])
 def view_member_ledger(username):
     if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
         return redirect(url_for('login'))
 
     conn = get_db_connection()
+    cur = conn.cursor()
     
-    member_row = conn.execute("SELECT * FROM users WHERE LOWER(username) = LOWER(?)", (username,)).fetchone()
+    # Process Password Reset
+    if request.method == 'POST':
+        new_password = request.form.get('new_password', '').strip()
+        if new_password:
+            cur.execute("UPDATE users SET password = %s WHERE LOWER(username) = LOWER(%s)", (new_password, username))
+            conn.commit()
+            flash(f'Password for {username} updated successfully!', 'success')
+        else:
+            flash('Password cannot be empty.', 'danger')
+
+    cur.execute("SELECT * FROM users WHERE LOWER(username) = LOWER(%s)", (username,))
+    member_row = cur.fetchone()
     member_data = dict(member_row) if member_row else {'username': username}
 
-    try:
-        transactions = conn.execute(
-            "SELECT * FROM transactions WHERE LOWER(username) = LOWER(?) ORDER BY id DESC", 
-            (username,)
-        ).fetchall()
-    except Exception:
-        transactions = []
+    cur.execute("SELECT * FROM transactions WHERE LOWER(username) = LOWER(%s) ORDER BY id DESC", (username,))
+    transactions = cur.fetchall()
     
-    try:
-        approved_val = conn.execute(
-            "SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(?) AND LOWER(status) = 'approved'", 
-            (username,)
-        ).fetchone()[0]
-        approved_total = approved_val if approved_val else 0
-    except Exception:
-        approved_total = 0
+    cur.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'approved'", (username,))
+    approved_val = cur.fetchone()['sum']
+    approved_total = approved_val if approved_val else 0
 
-    try:
-        pending_val = conn.execute(
-            "SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(?) AND LOWER(status) = 'pending'", 
-            (username,)
-        ).fetchone()[0]
-        pending_total = pending_val if pending_total else 0
-    except Exception:
-        pending_total = 0
+    cur.execute("SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(%s) AND LOWER(status) = 'pending'", (username,))
+    pending_val = cur.fetchone()['sum']
+    pending_total = pending_val if pending_val else 0
 
+    cur.close()
     conn.close()
 
     return render_template(
@@ -354,18 +317,20 @@ def view_member_ledger(username):
     )
 
 
-# --- APPROVE USER / STAFF ROUTE ---
+# --- APPROVE USER ROUTE ---
 @app.route('/admin/approve_user/<username>')
 def approve_user(username):
     if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
         return redirect(url_for('login'))
         
     conn = get_db_connection()
-    conn.execute("UPDATE users SET status = 'approved' WHERE LOWER(username) = LOWER(?)", (username,))
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET status = 'approved' WHERE LOWER(username) = LOWER(%s)", (username,))
     conn.commit()
+    cur.close()
     conn.close()
     
-    flash(f'Account for {username} has been approved!', 'success')
+    flash(f'Account for {username} approved!', 'success')
     return redirect(url_for('admin_dashboard'))
 
 
@@ -376,8 +341,10 @@ def approve_tx(tx_id):
         return redirect(url_for('login'))
         
     conn = get_db_connection()
-    conn.execute("UPDATE transactions SET status = 'approved' WHERE id = ?", (tx_id,))
+    cur = conn.cursor()
+    cur.execute("UPDATE transactions SET status = 'approved' WHERE id = %s", (tx_id,))
     conn.commit()
+    cur.close()
     conn.close()
     
     flash(f'Transaction #{tx_id} approved!', 'success')
@@ -390,15 +357,14 @@ def delete_tx(tx_id):
     if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
         return redirect(url_for('login'))
         
-    try:
-        conn = get_db_connection()
-        conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
-        conn.commit()
-        conn.close()
-        flash(f'Transaction #{tx_id} deleted permanently!', 'danger')
-    except Exception:
-        flash('Could not delete transaction.', 'warning')
-        
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM transactions WHERE id = %s", (tx_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    
+    flash(f'Transaction #{tx_id} deleted permanently!', 'danger')
     return redirect(url_for('admin_dashboard'))
 
 
@@ -410,6 +376,5 @@ def logout():
     return redirect(url_for('login'))
 
 
-# --- APP RUNNER ---
 if __name__ == '__main__':
     app.run(debug=True)
