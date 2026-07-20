@@ -1,80 +1,54 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-import sqlite3
 from datetime import date
 
 app = Flask(__name__)
 app.secret_key = 'sacco_secret_key_123'
-DB_NAME = 'sacco.db'
 
-# Helper function to get database connection
-def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
+# Default users list
+users = [
+    {
+        "username": "admin", 
+        "password": "123", 
+        "role": "admin", 
+        "status": "approved", 
+        "full_name": "System Admin", 
+        "phone": "0700000000",
+        "national_id": "CM1234567890AB",
+        "dob": "1990-01-01",
+        "reset_requested": False
+    },
+    {
+        "username": "staff", 
+        "password": "123", 
+        "role": "staff", 
+        "status": "approved", 
+        "full_name": "John Doe", 
+        "phone": "0771234567",
+        "national_id": "CF9876543210XY",
+        "dob": "1995-05-15",
+        "reset_requested": False
+    },
+    {
+        "username": "bbosa", 
+        "password": "123", 
+        "role": "staff", 
+        "status": "approved", 
+        "full_name": "bbosa canan", 
+        "phone": "0704180730",
+        "national_id": "cm90456297yzug",
+        "dob": "1992-08-10",
+        "reset_requested": False
+    }
+]
 
-# Create Database Tables Automatically
-def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Create Users Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'staff',
-            status TEXT NOT NULL DEFAULT 'pending',
-            full_name TEXT NOT NULL,
-            phone TEXT,
-            national_id TEXT,
-            dob TEXT,
-            reset_requested INTEGER DEFAULT 0
-        )
-    ''')
+# Transactions list
+transactions = [
+    {"id": 1, "username": "staff", "amount": 50000.0, "status": "approved", "frequency": "Monthly", "date": "2026-07-01"},
+    {"id": 2, "username": "staff", "amount": 20000.0, "status": "pending", "frequency": "Weekly", "date": "2026-07-15"}
+]
 
-    # Create Transactions Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            amount REAL NOT NULL,
-            status TEXT DEFAULT 'pending',
-            frequency TEXT DEFAULT 'Weekly',
-            date TEXT NOT NULL
-        )
-    ''')
-
-    # Create Payout History Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS payout_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            receipt_code TEXT NOT NULL,
-            recipient TEXT NOT NULL,
-            amount REAL NOT NULL,
-            date TEXT NOT NULL,
-            cycle TEXT DEFAULT 'Weekly Rotation',
-            payout_status TEXT DEFAULT 'PAID'
-        )
-    ''')
-
-    # Add Default Admin if doesn't exist
-    admin = cursor.execute('SELECT * FROM users WHERE username = ?', ('admin',)).fetchone()
-    if not admin:
-        cursor.execute('''
-            INSERT INTO users (username, password, role, status, full_name, phone, national_id, dob)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', ('admin', '123', 'admin', 'approved', 'System Admin', '0700000000', 'CM1234567890AB', '1990-01-01'))
-
-    conn.commit()
-    conn.close()
-
-# Initialize DB structure on launch
-init_db()
-
-# ----------------------------------------------------
-# ROUTES
-# ----------------------------------------------------
+# Payout history log
+payout_history = []
 
 @app.route('/')
 def home():
@@ -90,28 +64,40 @@ def login():
         uname = request.form.get('username')
         pwd = request.form.get('password')
         
-        conn = get_db_connection()
-        user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (uname, pwd)).fetchone()
-        conn.close()
+        user = next((u for u in users if u['username'] == uname and u['password'] == pwd), None)
         
         if user:
-            user_dict = dict(user)
-            if user_dict.get('status') == 'pending':
+            if user.get('status') == 'pending':
                 flash('Your account is pending Admin approval.', 'warning')
                 return render_template('login.html')
-            elif user_dict.get('status') == 'suspended':
+            elif user.get('status') == 'suspended':
                 flash('Your account has been suspended. Contact Admin.', 'danger')
                 return render_template('login.html')
                 
-            session['user'] = user_dict
-            flash(f'Welcome back, {user_dict.get("full_name", uname)}!', 'success')
-            if user_dict.get('role') == 'admin':
+            session['user'] = user
+            flash(f'Welcome back, {user.get("full_name", uname)}!', 'success')
+            if user.get('role') == 'admin':
                 return redirect(url_for('admin_dashboard'))
             return redirect(url_for('staff_dashboard'))
         else:
             flash('Invalid Username or Password!', 'danger')
             
     return render_template('login.html')
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        identifier = request.form.get('identifier')
+        user = next((u for u in users if u['username'] == identifier or u.get('phone') == identifier or u.get('national_id') == identifier), None)
+        
+        if user:
+            user['reset_requested'] = True
+            flash('Password reset request submitted! Notify the Admin.', 'info')
+            return redirect(url_for('login'))
+        else:
+            flash('No member account found with those details!', 'danger')
+            
+    return render_template('forgot_password.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -123,20 +109,21 @@ def signup():
         uname = request.form.get('username')
         pwd = request.form.get('password')
         
-        conn = get_db_connection()
-        existing = conn.execute('SELECT id FROM users WHERE username = ?', (uname,)).fetchone()
-        if existing:
-            conn.close()
+        if any(u['username'] == uname for u in users):
             flash('Username already exists! Choose another.', 'danger')
             return render_template('signup.html')
             
-        conn.execute('''
-            INSERT INTO users (username, password, role, status, full_name, phone, national_id, dob)
-            VALUES (?, ?, 'staff', 'pending', ?, ?, ?, ?)
-        ''', (uname, pwd, full_name, phone, national_id, dob))
-        conn.commit()
-        conn.close()
-        
+        users.append({
+            "username": uname,
+            "password": pwd,
+            "role": "staff",
+            "status": "pending",
+            "full_name": full_name,
+            "phone": phone,
+            "national_id": national_id,
+            "dob": dob,
+            "reset_requested": False
+        })
         flash('Registration submitted! Await Admin approval before logging in.', 'success')
         return redirect(url_for('login'))
         
@@ -148,7 +135,6 @@ def staff_dashboard():
         return redirect(url_for('login'))
         
     username = session['user']['username']
-    conn = get_db_connection()
     
     if request.method == 'POST':
         amount = float(request.form.get('amount', 0))
@@ -156,22 +142,22 @@ def staff_dashboard():
         tx_date = request.form.get('date')
         
         if amount > 0:
-            conn.execute('''
-                INSERT INTO transactions (username, amount, status, frequency, date)
-                VALUES (?, ?, 'pending', ?, ?)
-            ''', (username, amount, frequency, tx_date))
-            conn.commit()
+            tx_id = len(transactions) + 1
+            transactions.append({
+                "id": tx_id,
+                "username": username,
+                "amount": amount,
+                "status": "pending",
+                "frequency": frequency,
+                "date": tx_date
+            })
             flash('Contribution deposit request submitted!', 'info')
+            return redirect(url_for('staff_dashboard'))
             
-    my_txs_raw = conn.execute('SELECT * FROM transactions WHERE username = ?', (username,)).fetchall()
-    my_txs = [dict(t) for t in my_txs_raw]
-    
+    my_txs = [t for t in transactions if t['username'] == username]
     approved_balance = sum(t['amount'] for t in my_txs if t['status'] == 'approved')
     my_full_name = session['user'].get('full_name', username)
-    
-    payouts_raw = conn.execute('SELECT * FROM payout_history WHERE recipient = ? OR recipient = ?', (my_full_name, username)).fetchall()
-    my_payouts = [dict(p) for p in payouts_raw]
-    conn.close()
+    my_payouts = [p for p in payout_history if p['recipient'] == my_full_name or p['recipient'] == username]
 
     return render_template('staff.html', 
                            user=session['user'], 
@@ -184,8 +170,6 @@ def admin_dashboard():
     if 'user' not in session or session['user'].get('role') != 'admin':
         return redirect(url_for('login'))
         
-    conn = get_db_connection()
-    
     if request.method == 'POST':
         action = request.form.get('action')
         
@@ -193,10 +177,10 @@ def admin_dashboard():
             new_pwd = request.form.get('new_password')
             if new_pwd:
                 session['user']['password'] = new_pwd
-                conn.execute('UPDATE users SET password = ? WHERE username = "admin"', (new_pwd,))
-                conn.commit()
+                admin_user = next((u for u in users if u['username'] == 'admin'), None)
+                if admin_user:
+                    admin_user['password'] = new_pwd
                 flash('Admin password changed successfully!', 'success')
-            conn.close()
             return redirect(url_for('admin_dashboard'))
             
         elif action == 'disburse_batch_payout':
@@ -209,36 +193,31 @@ def admin_dashboard():
             for r_name, amt_str in zip(recipients, amounts):
                 if r_name.strip() and amt_str and float(amt_str) > 0:
                     amt = float(amt_str)
-                    conn.execute('''
-                        INSERT INTO payout_history (receipt_code, recipient, amount, date, cycle, payout_status)
-                        VALUES (?, ?, ?, ?, ?, 'PAID')
-                    ''', (f"REC-{date.today().strftime('%Y%m')}", r_name.strip(), amt, payout_date, cycle_notes))
+                    p_id = len(payout_history) + 1
+                    payout_history.append({
+                        "id": f"REC-{p_id:04d}",
+                        "recipient": r_name.strip(),
+                        "amount": amt,
+                        "date": payout_date,
+                        "cycle": cycle_notes,
+                        "payout_status": "PAID"
+                    })
                     disbursed_count += 1
-            conn.commit()
             
             if disbursed_count > 0:
                 flash(f"Successfully disbursed rotation payouts for {disbursed_count} staff member(s)!", 'success')
-            conn.close()
+            else:
+                flash("No valid staff or amounts provided for disbursement.", 'warning')
             return redirect(url_for('admin_dashboard'))
-
-    # Load All Data From SQLite
-    tx_raw = conn.execute('SELECT * FROM transactions').fetchall()
-    transactions = [dict(t) for t in tx_raw]
-    
-    payout_raw = conn.execute('SELECT * FROM payout_history').fetchall()
-    payout_history = [dict(p) for p in payout_raw]
-    
-    users_raw = conn.execute('SELECT * FROM users').fetchall()
-    users_list = [dict(u) for u in users_raw]
-    conn.close()
 
     total_approved = sum(t['amount'] for t in transactions if t.get('status') == 'approved')
     total_pending = sum(t['amount'] for t in transactions if t.get('status') == 'pending')
     total_paid_out = sum(p['amount'] for p in payout_history)
     sacco_reserve_vault = total_approved - total_paid_out
 
-    pending_users = [u for u in users_list if u.get('status') == 'pending']
-    approved_staff = [u for u in users_list if u.get('role') == 'staff' and u.get('status') != 'pending']
+    pending_users = [u for u in users if u.get('status') == 'pending']
+    approved_staff = [u for u in users if u.get('role') == 'staff' and u.get('status') != 'pending']
+    reset_requests = [u for u in users if u.get('reset_requested', False)]
     
     return render_template('admin.html', 
                            transactions=transactions, 
@@ -248,18 +227,39 @@ def admin_dashboard():
                            total_paid_out=total_paid_out,
                            payout_history=payout_history,
                            pending_users=pending_users,
-                           staff_list=approved_staff)
+                           staff_list=approved_staff,
+                           reset_requests=reset_requests)
 
-@app.route('/admin/approve_user/<username>')
-def approve_user(username):
+@app.route('/admin/member/<username>', methods=['GET', 'POST'])
+def view_member(username):
     if 'user' not in session or session['user'].get('role') != 'admin':
         return redirect(url_for('login'))
-    conn = get_db_connection()
-    conn.execute('UPDATE users SET status = "approved" WHERE username = ?', (username,))
-    conn.commit()
-    conn.close()
-    flash(f'Account for {username} approved!', 'success')
-    return redirect(url_for('admin_dashboard'))
+        
+    member = next((u for u in users if u['username'] == username), None)
+    if not member:
+        flash('Member not found!', 'danger')
+        return redirect(url_for('admin_dashboard'))
+        
+    if request.method == 'POST':
+        member['full_name'] = request.form.get('full_name')
+        member['phone'] = request.form.get('phone')
+        member['national_id'] = request.form.get('national_id')
+        member['dob'] = request.form.get('dob')
+        member['status'] = request.form.get('status')
+        
+        new_password = request.form.get('password')
+        if new_password:
+            member['password'] = new_password
+            member['reset_requested'] = False
+            flash(f'Password updated for {member["full_name"]}!', 'success')
+        else:
+            flash(f'Profile updated for {member["full_name"]}!', 'success')
+        return redirect(url_for('view_member', username=username))
+        
+    member_txs = [t for t in transactions if t['username'] == username]
+    total_paid = sum(t['amount'] for t in member_txs if t.get('status') == 'approved')
+    
+    return render_template('member_detail.html', member=member, transactions=member_txs, total_paid=total_paid)
 
 @app.route('/admin/approve_tx/<int:tx_id>')
 def approve_tx(tx_id):
@@ -270,6 +270,28 @@ def approve_tx(tx_id):
     conn.commit()
     conn.close()
     flash(f'Transaction #{tx_id} approved!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/delete_tx/<int:tx_id>')
+def delete_tx(tx_id):
+    if 'user' not in session or session['user'].get('role') != 'admin':
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    conn.execute('DELETE FROM transactions WHERE id = ?', (tx_id,))
+    conn.commit()
+    conn.close()
+    flash(f'Transaction #{tx_id} deleted permanently!', 'danger')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/approve_user/<username>')
+def approve_user(username):
+    if 'user' not in session or session['user'].get('role') != 'admin':
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    conn.execute('UPDATE users SET status = "approved" WHERE LOWER(username) = LOWER(?)', (username,))
+    conn.commit()
+    conn.close()
+    flash(f'Account for {username} approved!', 'success')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/logout')
