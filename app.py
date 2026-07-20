@@ -50,6 +50,56 @@ def login():
             return redirect(url_for('login'))
             
     return render_template('login.html')
+# --- REGISTER / SIGNUP ROUTE ---
+@app.route('/register', methods=['GET', 'POST'])
+@app.route('/signup', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        full_name = request.form.get('full_name')
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if not username or not password:
+            flash('Username and password are required!', 'danger')
+            return redirect(url_for('register'))
+            
+        conn = get_db_connection()
+        
+        # Check if username already exists
+        existing_user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        if existing_user:
+            conn.close()
+            flash('Username already exists. Please choose another or login.', 'warning')
+            return redirect(url_for('register'))
+            
+        # Insert new staff member (defaulting role to "staff" and status to "pending")
+        try:
+            conn.execute(
+                'INSERT INTO users (full_name, username, password, role, status) VALUES (?, ?, ?, ?, ?)',
+                (full_name, username, password, 'staff', 'pending')
+            )
+            conn.commit()
+            conn.close()
+            flash('Registration successful! Your account is pending admin approval.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            conn.close()
+            # Fallback if full_name column doesn't exist in old table schema
+            try:
+                conn = get_db_connection()
+                conn.execute(
+                    'INSERT INTO users (username, password, role, status) VALUES (?, ?, ?, ?)',
+                    (username, password, 'staff', 'pending')
+                )
+                conn.commit()
+                conn.close()
+                flash('Registration successful! Your account is pending admin approval.', 'success')
+                return redirect(url_for('login'))
+            except Exception as inner_e:
+                flash('Error creating account. Please try again or contact administrator.', 'danger')
+                return redirect(url_for('register'))
+
+    return render_template('signup.html')
 
 
 # --- STAFF DASHBOARD ROUTE ---
