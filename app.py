@@ -6,11 +6,49 @@ app = Flask(__name__)
 app.secret_key = 'sacco_secret_key_here'
 
 
-# 2. DATABASE HELPER
+# 2. DATABASE HELPER & INITIALIZATION
 def get_db_connection():
     conn = sqlite3.connect('sacco.db')
     conn.row_factory = sqlite3.Row
     return conn
+
+def init_db():
+    conn = get_db_connection()
+    # Ensure standard tables exist
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name TEXT,
+            username TEXT UNIQUE,
+            password TEXT,
+            role TEXT,
+            status TEXT
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            amount REAL,
+            frequency TEXT,
+            date TEXT,
+            status TEXT
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS payouts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            amount REAL,
+            date TEXT,
+            notes TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+# Initialize tables when starting up
+init_db()
 
 
 # --- 3. ROUTES ---
@@ -21,28 +59,34 @@ def home():
     return redirect(url_for('login'))
 
 
-# --- LOGIN ROUTE ---
+# --- LOGIN ROUTE (FIXED) ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
         
         conn = get_db_connection()
-        user_row = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password)).fetchone()
+        # Case-insensitive username check
+        user_row = conn.execute(
+            'SELECT * FROM users WHERE LOWER(username) = LOWER(?) AND password = ?', 
+            (username, password)
+        ).fetchone()
         conn.close()
         
         if user_row:
             user_dict = dict(user_row)
-            role = user_dict.get('role', 'staff')
+            role = str(user_dict.get('role', 'staff')).lower()
             raw_status = user_dict.get('status')
             status = str(raw_status).lower() if raw_status else 'approved'
             
+            # Admin Login
             if role == 'admin':
                 session['user'] = user_dict
                 return redirect(url_for('admin_dashboard'))
             
-            if status == 'approved':
+            # Staff Login (Allows 'approved', 'none', or 'null')
+            if status in ['approved', 'none', 'null']:
                 session['user'] = user_dict
                 return redirect(url_for('staff_dashboard'))
             else:
@@ -61,8 +105,8 @@ def login():
 def register():
     if request.method == 'POST':
         full_name = request.form.get('full_name')
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
         
         if not username or not password:
             flash('Username and password are required!', 'danger')
@@ -70,7 +114,11 @@ def register():
             
         conn = get_db_connection()
         
-        existing_user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        existing_user = conn.execute(
+            'SELECT * FROM users WHERE LOWER(username) = LOWER(?)', 
+            (username,)
+        ).fetchone()
+        
         if existing_user:
             conn.close()
             flash('Username already exists. Please choose another or login.', 'warning')
@@ -117,29 +165,40 @@ def staff_dashboard():
     conn = get_db_connection()
     
     try:
-        user_txs = conn.execute('SELECT * FROM transactions WHERE username = ? ORDER BY id DESC', (username,)).fetchall()
+        user_txs = conn.execute(
+            'SELECT * FROM transactions WHERE LOWER(username) = LOWER(?) ORDER BY id DESC', 
+            (username,)
+        ).fetchall()
     except Exception:
         user_txs = []
         
     try:
-        approved_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE username = ? AND LOWER(status) = 'approved'", (username,)).fetchone()[0]
+        approved_val = conn.execute(
+            "SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(?) AND LOWER(status) = 'approved'", 
+            (username,)
+        ).fetchone()[0]
         total_approved = approved_val if approved_val else 0
     except Exception:
         total_approved = 0
 
     try:
-        pending_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE username = ? AND LOWER(status) = 'pending'", (username,)).fetchone()[0]
+        pending_val = conn.execute(
+            "SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(?) AND LOWER(status) = 'pending'", 
+            (username,)
+        ).fetchone()[0]
         total_pending = pending_val if pending_val else 0
     except Exception:
         total_pending = 0
 
     conn.close()
     
-    return render_template('staff.html', 
-                           user=user, 
-                           transactions=user_txs, 
-                           total_approved=total_approved, 
-                           total_pending=total_pending)
+    return render_template(
+        'staff.html', 
+        user=user, 
+        transactions=user_txs, 
+        total_approved=total_approved, 
+        total_pending=total_pending
+    )
 
 
 # --- STAFF DEPOSIT / PAYMENT ROUTE ---
@@ -182,18 +241,22 @@ def make_payment():
 # --- ADMIN DASHBOARD ROUTE ---
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_dashboard():
-    if 'user' not in session or session['user'].get('role') != 'admin':
+    if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
         return redirect(url_for('login'))
         
     conn = get_db_connection()
     
     try:
-        pending_users = conn.execute("SELECT * FROM users WHERE LOWER(status) = 'pending' AND (role != 'admin' OR role IS NULL)").fetchall()
+        pending_users = conn.execute(
+            "SELECT * FROM users WHERE LOWER(status) = 'pending' AND (LOWER(role) != 'admin' OR role IS NULL)"
+        ).fetchall()
     except Exception:
         pending_users = []
         
     try:
-        staff_list = conn.execute("SELECT * FROM users WHERE (LOWER(status) = 'approved' OR status IS NULL) AND (role != 'admin' OR role IS NULL)").fetchall()
+        staff_list = conn.execute(
+            "SELECT * FROM users WHERE (LOWER(status) = 'approved' OR status IS NULL) AND (LOWER(role) != 'admin' OR role IS NULL)"
+        ).fetchall()
     except Exception:
         staff_list = []
 
@@ -229,42 +292,54 @@ def admin_dashboard():
     
     conn.close()
     
-    return render_template('admin.html', 
-                           pending_users=pending_users, 
-                           staff_list=staff_list, 
-                           transactions=transactions,
-                           approved=approved,
-                           pending=pending,
-                           total_paid_out=total_paid_out,
-                           reserve_vault=reserve_vault,
-                           payout_history=payout_history)
+    return render_template(
+        'admin.html', 
+        pending_users=pending_users, 
+        staff_list=staff_list, 
+        transactions=transactions,
+        approved=approved,
+        pending=pending,
+        total_paid_out=total_paid_out,
+        reserve_vault=reserve_vault,
+        payout_history=payout_history
+    )
 
 
-# --- ADMIN MEMBER LEDGER VIEW ROUTE ---
+# --- ADMIN MEMBER LEDGER VIEW ROUTE (FIXED) ---
 @app.route('/admin/member/<username>')
 @app.route('/ledger/<username>')
 def view_member_ledger(username):
-    if 'user' not in session or session['user'].get('role') != 'admin':
+    if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
         return redirect(url_for('login'))
 
     conn = get_db_connection()
     
-    member = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-    
+    member_row = conn.execute("SELECT * FROM users WHERE LOWER(username) = LOWER(?)", (username,)).fetchone()
+    member_data = dict(member_row) if member_row else {'username': username}
+
     try:
-        transactions = conn.execute("SELECT * FROM transactions WHERE username = ? ORDER BY id DESC", (username,)).fetchall()
+        transactions = conn.execute(
+            "SELECT * FROM transactions WHERE LOWER(username) = LOWER(?) ORDER BY id DESC", 
+            (username,)
+        ).fetchall()
     except Exception:
         transactions = []
     
     try:
-        approved_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE username = ? AND LOWER(status) = 'approved'", (username,)).fetchone()[0]
+        approved_val = conn.execute(
+            "SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(?) AND LOWER(status) = 'approved'", 
+            (username,)
+        ).fetchone()[0]
         approved_total = approved_val if approved_val else 0
     except Exception:
         approved_total = 0
 
     try:
-        pending_val = conn.execute("SELECT SUM(amount) FROM transactions WHERE username = ? AND LOWER(status) = 'pending'", (username,)).fetchone()[0]
-        pending_total = pending_val if pending_val else 0
+        pending_val = conn.execute(
+            "SELECT SUM(amount) FROM transactions WHERE LOWER(username) = LOWER(?) AND LOWER(status) = 'pending'", 
+            (username,)
+        ).fetchone()[0]
+        pending_total = pending_val if pending_total else 0
     except Exception:
         pending_total = 0
 
@@ -272,7 +347,7 @@ def view_member_ledger(username):
 
     return render_template(
         'member_detail.html', 
-        member=dict(member) if member else {'username': username}, 
+        member=member_data, 
         transactions=transactions, 
         approved_total=approved_total,
         pending_total=pending_total
@@ -282,11 +357,11 @@ def view_member_ledger(username):
 # --- APPROVE USER / STAFF ROUTE ---
 @app.route('/admin/approve_user/<username>')
 def approve_user(username):
-    if 'user' not in session or session['user'].get('role') != 'admin':
+    if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
         return redirect(url_for('login'))
         
     conn = get_db_connection()
-    conn.execute("UPDATE users SET status = 'approved' WHERE username = ?", (username,))
+    conn.execute("UPDATE users SET status = 'approved' WHERE LOWER(username) = LOWER(?)", (username,))
     conn.commit()
     conn.close()
     
@@ -297,7 +372,7 @@ def approve_user(username):
 # --- APPROVE TRANSACTION ROUTE ---
 @app.route('/admin/approve_tx/<int:tx_id>')
 def approve_tx(tx_id):
-    if 'user' not in session or session['user'].get('role') != 'admin':
+    if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
         return redirect(url_for('login'))
         
     conn = get_db_connection()
@@ -312,7 +387,7 @@ def approve_tx(tx_id):
 # --- DELETE TRANSACTION ROUTE ---
 @app.route('/admin/delete_tx/<int:tx_id>')
 def delete_tx(tx_id):
-    if 'user' not in session or session['user'].get('role') != 'admin':
+    if 'user' not in session or str(session['user'].get('role')).lower() != 'admin':
         return redirect(url_for('login'))
         
     try:
@@ -335,6 +410,6 @@ def logout():
     return redirect(url_for('login'))
 
 
-# --- APP RUNNER (FOR LOCAL TESTING) ---
+# --- APP RUNNER ---
 if __name__ == '__main__':
     app.run(debug=True)
