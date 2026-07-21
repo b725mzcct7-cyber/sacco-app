@@ -229,7 +229,7 @@ def staff_dashboard():
             flash('Please enter a valid deposit amount.', 'danger')
         return redirect(url_for('staff_dashboard'))
 
-    # Retrieve User Transactions
+    # Fetch User Transactions
     try:
         cur.execute('SELECT * FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) ORDER BY id DESC', (username,))
         user_txs = cur.fetchall()
@@ -237,7 +237,7 @@ def staff_dashboard():
         conn.rollback()
         user_txs = []
 
-    # Calculate User Approved Total
+    # Calculate User Balance (Approved Total)
     try:
         cur.execute(
             """
@@ -249,27 +249,26 @@ def staff_dashboard():
             (username,)
         )
         res = cur.fetchone()
-        total_approved = float(res['total']) if res and res['total'] is not None else 0.0
+        balance = float(res['total']) if res and res['total'] is not None else 0.0
     except Exception:
         conn.rollback()
-        total_approved = 0.0
+        balance = 0.0
 
-    # Calculate User Pending Total
+    # Fetch User Payout Receipts
     try:
         cur.execute(
             """
-            SELECT COALESCE(SUM(amount), 0) AS total 
-            FROM transactions 
+            SELECT id, date, amount, username AS recipient, notes AS cycle 
+            FROM payouts 
             WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) 
-              AND LOWER(TRIM(status)) = 'pending'
+            ORDER BY id DESC
             """, 
             (username,)
         )
-        res = cur.fetchone()
-        total_pending = float(res['total']) if res and res['total'] is not None else 0.0
+        my_payouts = cur.fetchall()
     except Exception:
         conn.rollback()
-        total_pending = 0.0
+        my_payouts = []
 
     cur.close()
     conn.close()
@@ -278,8 +277,8 @@ def staff_dashboard():
         'staff.html', 
         user=user, 
         transactions=user_txs, 
-        total_approved=total_approved, 
-        total_pending=total_pending
+        balance=balance, 
+        my_payouts=my_payouts
     )
 
 
