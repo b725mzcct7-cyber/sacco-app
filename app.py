@@ -253,10 +253,11 @@ def staff_dashboard():
     user_dict = dict(db_user)
     role = str(user_dict.get('role', 'staff')).lower().strip()
 
-    if role == 'admin':
-        cur.close()
-        conn.close()
-        return redirect(url_for('admin_dashboard'))
+    # DELETE THESE LINES:
+if role == 'admin':
+    cur.close()
+    conn.close()
+    return redirect(url_for('admin_dashboard'))
 
     # Handle Deposit Submission
     if request.method == 'POST':
@@ -626,7 +627,7 @@ def approve_tx(tx_id):
     return redirect(url_for('admin_dashboard'))
 
 
-# --- DELETE TRANSACTION RECORD ---
+## --- DELETE TRANSACTION RECORD ---
 @app.route('/admin/delete_tx/<int:tx_id>')
 @admin_required
 def delete_tx(tx_id):
