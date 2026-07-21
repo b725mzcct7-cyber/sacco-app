@@ -71,6 +71,7 @@
                 </div>
 
                 <div class="flex items-center space-x-4">
+                    <!-- Rotation Selector Dropdown -->
                     <div class="flex items-center space-x-2">
                         <label for="rotationSelect" class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Rotation:</label>
                         <select id="rotationSelect" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 px-3 py-1.5 font-medium">
@@ -83,6 +84,7 @@
 
                     <div class="h-6 w-px bg-slate-200"></div>
 
+                    <!-- Admin Profile View -->
                     <div class="flex items-center space-x-3">
                         <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center border border-indigo-200">
                             CB
@@ -165,19 +167,17 @@
                                     </tr>
                                 </thead>
                                 <tbody class="text-sm divide-y divide-slate-100 text-slate-700">
-                                    {% if pending_users %}
-                                        {% for u in pending_users %}
-                                        <tr>
-                                            <td class="py-3 px-2 font-medium">{{ u.full_name }}</td>
-                                            <td class="py-3 px-2 text-slate-500">{{ u.username }}</td>
-                                            <td class="py-3 px-2 text-right">
-                                                <a href="{{ url_for('approve_user', username=u.username) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-medium">Approve</a>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
+                                    {% for u in pending_users %}
+                                    <tr>
+                                        <td class="py-3 px-2 font-medium">{{ u.full_name }}</td>
+                                        <td class="py-3 px-2 text-slate-500">{{ u.username }}</td>
+                                        <td class="py-3 px-2 text-right">
+                                            <a href="{{ url_for('approve_user', username=u.username) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-medium">Approve</a>
+                                        </td>
+                                    </tr>
                                     {% else %}
-                                        <tr><td colspan="3" class="text-center py-4 text-slate-400 text-xs">No pending registrations.</td></tr>
-                                    {% endif %}
+                                    <tr><td colspan="3" class="text-center py-4 text-slate-400 text-xs">No pending registrations.</td></tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>
@@ -198,19 +198,17 @@
                                     </tr>
                                 </thead>
                                 <tbody class="text-sm divide-y divide-slate-100 text-slate-700">
-                                    {% if pending_txs %}
-                                        {% for tx in pending_txs %}
-                                        <tr>
-                                            <td class="py-3 px-2 font-medium">{{ tx.username }}</td>
-                                            <td class="py-3 px-2 font-mono text-slate-600">UGX {{ "{:,.2f}".format(tx.amount) }}</td>
-                                            <td class="py-3 px-2 text-right">
-                                                <a href="{{ url_for('approve_tx', tx_id=tx.id) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-medium">Approve Payment</a>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
+                                    {% for tx in pending_txs %}
+                                    <tr>
+                                        <td class="py-3 px-2 font-medium">{{ tx.username }}</td>
+                                        <td class="py-3 px-2 font-mono text-slate-600">UGX {{ "{:,.2f}".format(tx.amount) }}</td>
+                                        <td class="py-3 px-2 text-right">
+                                            <a href="{{ url_for('approve_tx', tx_id=tx.id) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-medium">Approve Payment</a>
+                                        </td>
+                                    </tr>
                                     {% else %}
-                                        <tr><td colspan="3" class="text-center py-4 text-slate-400 text-xs">No pending payment requests.</td></tr>
-                                    {% endif %}
+                                    <tr><td colspan="3" class="text-center py-4 text-slate-400 text-xs">No pending payment requests.</td></tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>
@@ -248,7 +246,6 @@
                                     <th class="py-3 px-3">Phone</th>
                                     <th class="py-3 px-3">NIN</th>
                                     <th class="py-3 px-3">Status</th>
-                                    <th class="py-3 px-3 text-center">Payout</th>
                                     <th class="py-3 px-3 text-right">Staff Password Reset</th>
                                 </tr>
                             </thead>
@@ -260,12 +257,6 @@
                                     <td class="py-3.5 px-3">{{ m.phone or 'N/A' }}</td>
                                     <td class="py-3.5 px-3">{{ m.nin or 'N/A' }}</td>
                                     <td class="py-3.5 px-3"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-medium">{{ m.status or 'Approved' }}</span></td>
-                                    <td class="py-3.5 px-3 text-center">
-                                        <a href="{{ url_for('member_payout', username=m.username) }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-xs font-medium inline-flex items-center space-x-1">
-                                            <i class="fa-solid fa-money-bill-wave"></i>
-                                            <span>Payout</span>
-                                        </a>
-                                    </td>
                                     <td class="py-3.5 px-3 text-right">
                                         <form action="{{ url_for('reset_password', username=m.username) }}" method="POST" class="inline-flex gap-2 justify-end">
                                             <input type="text" name="new_password" placeholder="New pass" required class="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs w-28">
