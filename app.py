@@ -25,7 +25,6 @@ def get_db_connection():
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
         
-    # Strictly require SSL connection for Render PostgreSQL hosting
     if "sslmode=" not in url:
         url += "?sslmode=require" if "?" not in url else "&sslmode=require"
         
@@ -91,7 +90,6 @@ def init_db():
     except Exception as e:
         print("Database init deferred/warning:", e)
 
-# Execute DB Init safely on startup to prevent Gunicorn boot failure
 try:
     init_db()
 except Exception as err:
@@ -171,7 +169,6 @@ def login():
                     return redirect(url_for('login'))
 
                 session.clear()
-                
                 session['user'] = {
                     'id': user_dict.get('id'),
                     'full_name': user_dict.get('full_name'),
@@ -212,7 +209,6 @@ def register():
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            
             cur.execute('SELECT * FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s))', (username,))
             existing_user = cur.fetchone()
             
@@ -261,7 +257,6 @@ def staff_dashboard():
 
         user_dict = dict(db_user)
 
-        # Handle Deposit Submission
         if request.method == 'POST':
             amount = request.form.get('amount')
             frequency = request.form.get('frequency', 'Weekly')
@@ -285,7 +280,6 @@ def staff_dashboard():
             conn.close()
             return redirect(url_for('staff_dashboard'))
 
-        # Fetch User Transactions & Balances
         try:
             cur.execute('SELECT * FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) ORDER BY id DESC', (username,))
             user_txs = cur.fetchall()
@@ -346,11 +340,89 @@ def deposit_request():
     return staff_dashboard()
 
 
+@app.route('/deposit', methods=['GET', 'POST'])
+@app.route('/make_payment', methods=['GET', 'POST'])
+@login_required
+def make_payment():
+    return staff_dashboard()
+
+
+# --- LEFT NAVIGATION ENDPOINTS FOR STAFF & ADMIN ---
+@app.route('/members')
+@app.route('/admin/members')
+@login_required
+def members_view():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    search = request.args.get('q', '').strip()
+    try:
+        if search:
+            cur.execute("SELECT * FROM users WHERE LOWER(full_name) LIKE LOWER(%s) OR LOWER(username) LIKE LOWER(%s)", (f"%{search}%", f"%{search}%"))
+        else:
+            cur.execute("SELECT * FROM users ORDER BY id DESC")
+        members = cur.fetchall()
+    except Exception:
+        members = []
+    cur.close()
+    conn.close()
+    
+    if session['user'].get('role') == 'admin':
+        return render_template('admin.html', staff_list=members, active_tab='members', pending_users=[], transactions=[], approved=0, pending=0, total_paid_out=0, reserve_vault=0, payout_history=[])
+    return render_template('staff.html', user=session['user'], staff_list=members, active_tab='members', transactions=[], balance=0, my_payouts=[])
+
+
+@app.route('/accounts')
+@app.route('/admin/accounts')
+@login_required
+def accounts_view():
+    return redirect(url_for('admin_dashboard') if session['user'].get('role') == 'admin' else url_for('staff_dashboard'))
+
+
+@app.route('/shares')
+@app.route('/admin/shares')
+@login_required
+def shares_view():
+    return redirect(url_for('admin_dashboard') if session['user'].get('role') == 'admin' else url_for('staff_dashboard'))
+
+
+@app.route('/savings')
+@app.route('/admin/savings')
+@login_required
+def savings_view():
+    return redirect(url_for('admin_dashboard') if session['user'].get('role') == 'admin' else url_for('staff_dashboard'))
+
+
+@app.route('/transactions')
+@app.route('/admin/transactions')
+@login_required
+def transactions_view():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM transactions ORDER BY id DESC")
+        txs = cur.fetchall()
+    except Exception:
+        txs = []
+    cur.close()
+    conn.close()
+    if session['user'].get('role') == 'admin':
+        return render_template('admin.html', transactions=txs, active_tab='transactions', pending_users=[], staff_list=[], approved=0, pending=0, total_paid_out=0, reserve_vault=0, payout_history=[])
+    return render_template('staff.html', user=session['user'], transactions=txs, active_tab='transactions', balance=0, my_payouts=[])
+
+
+@app.route('/reports')
+@app.route('/admin/reports')
+@login_required
+def reports_view():
+    return redirect(url_for('admin_dashboard') if session['user'].get('role') == 'admin' else url_for('staff_dashboard'))
+
+
 # --- ADMIN DASHBOARD ---
 @app.route('/admin', methods=['GET', 'POST'])
 @admin_required
 def admin_dashboard():
     conn = None
+    search_query = request.args.get('q', '').strip()
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -363,7 +435,10 @@ def admin_dashboard():
             pending_users = []
 
         try:
-            cur.execute("SELECT * FROM users WHERE (LOWER(TRIM(status)) = 'approved' OR status IS NULL) AND (LOWER(TRIM(role)) != 'admin' OR role IS NULL) ORDER BY id DESC")
+            if search_query:
+                cur.execute("SELECT * FROM users WHERE (LOWER(TRIM(status)) = 'approved' OR status IS NULL) AND (LOWER(TRIM(role)) != 'admin' OR role IS NULL) AND (LOWER(username) LIKE LOWER(%s) OR LOWER(full_name) LIKE LOWER(%s)) ORDER BY id DESC", (f"%{search_query}%", f"%{search_query}%"))
+            else:
+                cur.execute("SELECT * FROM users WHERE (LOWER(TRIM(status)) = 'approved' OR status IS NULL) AND (LOWER(TRIM(role)) != 'admin' OR role IS NULL) ORDER BY id DESC")
             staff_list = cur.fetchall()
         except Exception:
             conn.rollback()
@@ -421,7 +496,8 @@ def admin_dashboard():
             pending=pending,
             total_paid_out=total_paid_out,
             reserve_vault=reserve_vault,
-            payout_history=payout_history
+            payout_history=payout_history,
+            search_query=search_query
         )
     except Exception as e:
         if conn: conn.rollback(); conn.close()
@@ -429,7 +505,7 @@ def admin_dashboard():
         return redirect(url_for('login'))
 
 
-# --- SINGLE FORM PAYOUT DISBURSEMENT ---
+# --- PAYOUT ROUTES ---
 @app.route('/admin/disburse_payout', methods=['POST'])
 @admin_required
 def disburse_payout():
@@ -441,32 +517,27 @@ def disburse_payout():
         if amount > 0 and username:
             conn = get_db_connection()
             cur = conn.cursor()
-            
             cur.execute(
                 "INSERT INTO payouts (username, amount, date, notes) VALUES (%s, %s, NOW()::text, %s)",
                 (str(username).strip(), amount, 'Disbursed Payout')
             )
-            
             conn.commit()
             cur.close()
             conn.close()
-            
             flash(f'Successfully disbursed UGX {amount:,.2f} payout to {username}!', 'success')
         else:
             flash('Invalid payout amount or staff member selected.', 'danger')
     except Exception as e:
-        flash(f'Disbursement error: {e}', 'danger')
+            flash(f'Disbursement error: {e}', 'danger')
 
     return redirect(url_for('admin_dashboard'))
 
 
-# --- DISBURSE PAYOUTS QUEUE ROUTE ---
 @app.route('/admin/disburse_payouts', methods=['POST'])
 @admin_required
 def disburse_payouts():
     payout_date = request.form.get('payout_date')
     notes = request.form.get('notes', 'Rotation Payout Cycle')
-
     disbursed_count = 0
     conn = get_db_connection()
     cur = conn.cursor()
@@ -503,7 +574,6 @@ def disburse_payouts():
     return redirect(url_for('admin_dashboard'))
 
 
-# --- DIRECT SINGLE PAYOUT ROUTE ---
 @app.route('/admin/add_payout', methods=['POST'])
 @admin_required
 def add_payout():
@@ -545,10 +615,7 @@ def view_member_ledger(username):
         new_password = request.form.get('new_password', '').strip()
         if new_password:
             try:
-                cur.execute(
-                    "UPDATE users SET password = %s WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s))", 
-                    (new_password, target_username)
-                )
+                cur.execute("UPDATE users SET password = %s WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s))", (new_password, target_username))
                 conn.commit()
                 flash(f'Password for {target_username} updated successfully!', 'success')
             except Exception as e:
@@ -573,10 +640,7 @@ def view_member_ledger(username):
         transactions = []
 
     try:
-        cur.execute(
-            "SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'approved'", 
-            (target_username,)
-        )
+        cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'approved'", (target_username,))
         res = cur.fetchone()
         approved_total = float(res['total']) if res and res.get('total') is not None else 0.0
     except Exception:
@@ -584,10 +648,7 @@ def view_member_ledger(username):
         approved_total = 0.0
 
     try:
-        cur.execute(
-            "SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'pending'", 
-            (target_username,)
-        )
+        cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'pending'", (target_username,))
         res = cur.fetchone()
         pending_total = float(res['total']) if res and res.get('total') is not None else 0.0
     except Exception:
@@ -606,7 +667,7 @@ def view_member_ledger(username):
     )
 
 
-# --- APPROVE USER REGISTRATION ---
+# --- APPROVE / DELETE / TRANSACTION ENDPOINTS ---
 @app.route('/admin/approve_user/<username>')
 @admin_required
 def approve_user(username):
@@ -620,11 +681,9 @@ def approve_user(username):
         flash(f'Account for {username} approved successfully!', 'success')
     except Exception as e:
         flash(f'Approval error: {e}', 'danger')
-        
     return redirect(url_for('admin_dashboard'))
 
 
-# --- DELETE USER / REMOVE STAFF MEMBER ---
 @app.route('/admin/delete_user/<username>')
 @admin_required
 def delete_user(username):
@@ -638,11 +697,9 @@ def delete_user(username):
         flash(f'Staff member "{username}" removed permanently.', 'info')
     except Exception as e:
         flash(f'Error deleting staff member: {e}', 'danger')
-        
     return redirect(url_for('admin_dashboard'))
 
 
-# --- APPROVE DEPOSIT TRANSACTION ---
 @app.route('/admin/approve_tx/<int:tx_id>')
 @admin_required
 def approve_tx(tx_id):
@@ -656,11 +713,9 @@ def approve_tx(tx_id):
         flash(f'Transaction #{tx_id} approved!', 'success')
     except Exception as e:
         flash(f'Approval error: {e}', 'danger')
-        
     return redirect(url_for('admin_dashboard'))
 
 
-# --- DELETE TRANSACTION RECORD ---
 @app.route('/admin/delete_tx/<int:tx_id>')
 @admin_required
 def delete_tx(tx_id):
@@ -674,11 +729,9 @@ def delete_tx(tx_id):
         flash(f'Transaction #{tx_id} removed permanently!', 'warning')
     except Exception as e:
         flash(f'Deletion error: {e}', 'danger')
-        
     return redirect(url_for('admin_dashboard'))
 
 
-# --- LOGOUT ROUTE ---
 @app.route('/logout')
 def logout():
     session.clear()
