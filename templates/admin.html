@@ -3,315 +3,377 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Canan Bbosa Ventures SACCO</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Canan Bbosa Ventures - SACCO Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .sidebar { min-height: 100vh; background-color: #111827; color: #fff; position: fixed; width: 260px; top: 0; left: 0; z-index: 100; }
-        .sidebar .brand { padding: 20px; font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid #1f2937; color: #38bdf8; }
-        .sidebar .nav-link { color: #9ca3af; padding: 12px 20px; margin: 4px 12px; border-radius: 8px; transition: 0.2s; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #2563eb; color: #fff; }
-        .main-content { margin-left: 260px; padding: 30px; }
-        .card-stat { border: none; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-    </style>
 </head>
-<body>
+<body class="bg-slate-50 font-sans antialiased">
 
-    <!-- Sidebar -->
-    <div class="sidebar d-flex flex-column justify-content-between">
-        <div>
-            <div class="brand"><i class="fas fa-university me-2"></i> UNITY SACCO</div>
-            <ul class="nav flex-column mt-3">
-                <li class="nav-item"><a href="{{ url_for('admin_dashboard') }}" class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}"><i class="fas fa-home me-2"></i> Dashboard</a></li>
-                <li class="nav-item"><a href="{{ url_for('admin_members') }}" class="nav-link {% if active_tab == 'members' %}active{% endif %}"><i class="fas fa-users me-2"></i> Members</a></li>
-                <li class="nav-item"><a href="{{ url_for('admin_accounts') }}" class="nav-link {% if active_tab == 'accounts' %}active{% endif %}"><i class="fas fa-wallet me-2"></i> Accounts</a></li>
-                <li class="nav-item"><a href="{{ url_for('admin_shares') }}" class="nav-link {% if active_tab == 'shares' %}active{% endif %}"><i class="fas fa-chart-pie me-2"></i> Shares</a></li>
-                <li class="nav-item"><a href="{{ url_for('admin_loans') }}" class="nav-link {% if active_tab == 'loans' %}active{% endif %}"><i class="fas fa-hand-holding-usd me-2"></i> Loans</a></li>
-                <li class="nav-item"><a href="{{ url_for('admin_savings') }}" class="nav-link {% if active_tab == 'savings' %}active{% endif %}"><i class="fas fa-piggy-bank me-2"></i> Savings</a></li>
-                <li class="nav-item"><a href="{{ url_for('admin_transactions') }}" class="nav-link {% if active_tab == 'transactions' %}active{% endif %}"><i class="fas fa-exchange-alt me-2"></i> Transactions</a></li>
-                <li class="nav-item"><a href="{{ url_for('admin_reports') }}" class="nav-link {% if active_tab == 'reports' %}active{% endif %}"><i class="fas fa-file-alt me-2"></i> Reports</a></li>
-            </ul>
-        </div>
-        <div class="p-3 border-top border-secondary">
-            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger w-100"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
-        </div>
-    </div>
+    <!-- App Wrapper -->
+    <div class="flex h-screen overflow-hidden">
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="container-fluid">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex shadow-xl">
+            <div class="p-6 border-b border-slate-800 flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg font-bold">
+                    <i class="fa-solid fa-vault"></i>
+                </div>
+                <div>
+                    <h1 class="text-white font-bold tracking-wide">Canan Bbosa Ventures</h1>
+                    <p class="text-xs text-slate-400">SACCO Admin Portal</p>
+                </div>
+            </div>
             
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-indigo-600 text-white font-medium transition">
+                    <i class="fa-solid fa-chart-pie w-5"></i>
+                    <span>Dashboard Overview</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-users w-5"></i>
+                    <span>Member Details</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-hand-holding-dollar w-5"></i>
+                    <span>Loan Issuance</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-money-bill-transfer w-5"></i>
+                    <span>Payout Forms</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-receipt w-5"></i>
+                    <span>Printable Receipts</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-user-shield w-5"></i>
+                    <span>Staff Ledger & Passwords</span>
+                </a>
+            </nav>
 
-            <!-- TAB 1: DASHBOARD -->
-            {% if active_tab == 'dashboard' %}
-                <h2 class="mb-4 fw-bold">Admin Dashboard</h2>
-                <div class="row g-4 mb-4">
-                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Approved Deposits</h6><h3 class="text-success">UGX {{ "{:,.2f}".format(approved) }}</h3></div></div>
-                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Pending Deposits</h6><h3 class="text-warning">UGX {{ "{:,.2f}".format(pending) }}</h3></div></div>
-                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Total Paid Out</h6><h3 class="text-danger">UGX {{ "{:,.2f}".format(total_paid_out) }}</h3></div></div>
-                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Reserve Vault</h6><h3 class="text-primary">UGX {{ "{:,.2f}".format(reserve_vault) }}</h3></div></div>
+            <div class="p-4 border-t border-slate-800">
+                <button class="w-full flex items-center justify-center space-x-2 bg-slate-800 hover:bg-red-600 hover:text-white text-slate-300 py-2.5 rounded-lg transition text-sm font-medium">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Secure Sign Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col overflow-y-auto">
+            
+            <!-- Top Header Bar -->
+            <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-8 shadow-sm z-10">
+                <div class="flex items-center space-x-4">
+                    <button class="md:hidden text-slate-600 focus:outline-none">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <span class="text-sm font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                        System Active: Rotation Cycle 04
+                    </span>
                 </div>
 
-                <!-- Pending Approvals -->
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <div class="card card-stat p-4 bg-white">
-                            <h5 class="fw-bold mb-3"><i class="fas fa-user-clock text-warning me-2"></i> Pending Member Registrations</h5>
-                            <div class="table-responsive">
-                                <table class="table align-middle">
-                                    <thead><tr><th>Name</th><th>Username</th><th>Action</th></tr></thead>
-                                    <tbody>
-                                        {% for u in pending_users %}
-                                        <tr>
-                                            <td>{{ u.full_name }}</td>
-                                            <td>{{ u.username }}</td>
-                                            <td><a href="{{ url_for('approve_user', username=u.username) }}" class="btn btn-sm btn-success">Approve</a></td>
-                                        </tr>
-                                        {% else %}
-                                        <tr><td colspan="3" class="text-center text-muted">No pending registrations.</td></tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                <div class="flex items-center space-x-4">
+                    <!-- Rotation Selector Dropdown -->
+                    <div class="flex items-center space-x-2">
+                        <label for="rotationSelect" class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Rotation:</label>
+                        <select id="rotationSelect" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 px-3 py-1.5 font-medium">
+                            <option value="1">Cycle 01 - Q1</option>
+                            <option value="2">Cycle 02 - Q2</option>
+                            <option value="3">Cycle 03 - Q3</option>
+                            <option value="4" selected>Cycle 04 - Q4</option>
+                        </select>
+                    </div>
+
+                    <div class="h-6 w-px bg-slate-200"></div>
+
+                    <!-- Admin Profile View -->
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center border border-indigo-200">
+                            CB
+                        </div>
+                        <div class="hidden sm:block text-left">
+                            <p class="text-xs font-bold text-slate-800">Canan Admin</p>
+                            <p class="text-[10px] text-slate-500">Super Administrator</p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Dashboard Body Container -->
+            <main class="p-8 max-w-7xl mx-auto w-full space-y-8">
+                
+                <!-- Page Title Section -->
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">SACCO Administration Dashboard</h2>
+                        <p class="text-sm text-slate-500">Manage member accounts, execute loan distributions, review payouts, and handle staff access.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition flex items-center space-x-2">
+                            <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                            <span>Export Data</span>
+                        </button>
+                        <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md transition flex items-center space-x-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>New Member</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Metric Cards Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Members</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1">1,248</h3>
+                            <span class="text-xs font-medium text-emerald-600 mt-1 inline-block"><i class="fa-solid fa-arrow-up"></i> +12% this month</span>
+                        </div>
+                        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Loans</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1">UGX 48.5M</h3>
+                            <span class="text-xs font-medium text-indigo-600 mt-1 inline-block"><i class="fa-solid fa-circle-check"></i> 84 Active Portfolios</span>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Pending Payouts</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1">UGX 12.3M</h3>
+                            <span class="text-xs font-medium text-amber-600 mt-1 inline-block"><i class="fa-solid fa-clock"></i> Requires Approval</span>
+                        </div>
+                        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-money-bill-transfer"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Staff Ledgers</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1">14 Active</h3>
+                            <span class="text-xs font-medium text-emerald-600 mt-1 inline-block"><i class="fa-solid fa-shield-halved"></i> Secured & Locked</span>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Module Grid Sections -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <!-- Left 2 Columns: Loan Issuance Tool & Payout Forms -->
+                    <div class="lg:col-span-2 space-y-8">
+                        
+                        <!-- Loan Issuance Tool Box -->
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+                                    <i class="fa-solid fa-hand-holding-dollar text-indigo-600"></i>
+                                    <span>Loan Issuance & Approval Tool</span>
+                                </h3>
+                                <span class="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded font-medium">Rotation 04 Ready</span>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Select Member</label>
+                                        <select class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:ring-indigo-500 focus:border-indigo-500">
+                                            <option>Bbosa Ronald (M-10024)</option>
+                                            <option>Nakitto Sarah (M-10031)</option>
+                                            <option>Kigozi Moses (M-10045)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Loan Amount (UGX)</label>
+                                        <input type="text" placeholder="e.g. 1,500,000" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Repayment Term</label>
+                                        <select class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:ring-indigo-500 focus:border-indigo-500">
+                                            <option>3 Months</option>
+                                            <option>6 Months</option>
+                                            <option>12 Months</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Interest Rate (%)</label>
+                                        <input type="text" value="12%" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Disburse Channel</label>
+                                        <select class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:ring-indigo-500 focus:border-indigo-500">
+                                            <option>Mobile Money (MTN/Airtel)</option>
+                                            <option>Centenary Bank Transfer</option>
+                                            <option>Stanbic Bank Transfer</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="pt-2 flex justify-end">
+                                    <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm shadow transition flex items-center space-x-2">
+                                        <i class="fa-solid fa-check-to-slot"></i>
+                                        <span>Process & Issue Loan</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card card-stat p-4 bg-white">
-                            <h5 class="fw-bold mb-3"><i class="fas fa-receipt text-warning me-2"></i> Pending Payment Requests</h5>
-                            <div class="table-responsive">
-                                <table class="table align-middle">
-                                    <thead><tr><th>User</th><th>Amount</th><th>Action</th></tr></thead>
-                                    <tbody>
-                                        {% for tx in pending_txs %}
-                                        <tr>
-                                            <td>{{ tx.username }}</td>
-                                            <td>UGX {{ "{:,.2f}".format(tx.amount) }}</td>
-                                            <td><a href="{{ url_for('approve_tx', tx_id=tx.id) }}" class="btn btn-sm btn-success">Approve Payment</a></td>
-                                        </tr>
-                                        {% else %}
-                                        <tr><td colspan="3" class="text-center text-muted">No pending payment requests.</td></tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+
+                        <!-- Payout Forms Section -->
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+                                    <i class="fa-solid fa-money-bill-transfer text-indigo-600"></i>
+                                    <span>Payout Verification Forms</span>
+                                </h3>
+                                <span class="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded font-medium">Forms Live</span>
+                            </div>
+                            <div class="p-6">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="border-b border-slate-200 text-xs uppercase font-semibold text-slate-400">
+                                                <th class="py-3 px-4">Voucher ID</th>
+                                                <th class="py-3 px-4">Beneficiary</th>
+                                                <th class="py-3 px-4">Type</th>
+                                                <th class="py-3 px-4">Amount</th>
+                                                <th class="py-3 px-4">Status</th>
+                                                <th class="py-3 px-4 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="text-sm divide-y divide-slate-100 text-slate-700">
+                                            <tr class="hover:bg-slate-50/80 transition">
+                                                <td class="py-3.5 px-4 font-semibold text-slate-800">VOC-8842</td>
+                                                <td class="py-3.5 px-4">Nalwanga Grace</td>
+                                                <td class="py-3.5 px-4"><span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">Savings Return</span></td>
+                                                <td class="py-3.5 px-4 font-mono font-medium">UGX 850,000</td>
+                                                <td class="py-3.5 px-4"><span class="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium">Pending Form</span></td>
+                                                <td class="py-3.5 px-4 text-right">
+                                                    <button class="text-indigo-600 hover:text-indigo-900 font-medium text-xs bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 transition">Review Form</button>
+                                                </td>
+                                            </tr>
+                                            <tr class="hover:bg-slate-50/80 transition">
+                                                <td class="py-3.5 px-4 font-semibold text-slate-800">VOC-8843</td>
+                                                <td class="py-3.5 px-4">Mukasa Paul</td>
+                                                <td class="py-3.5 px-4"><span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-medium">Dividend Payout</span></td>
+                                                <td class="py-3.5 px-4 font-mono font-medium">UGX 1,200,000</td>
+                                                <td class="py-3.5 px-4"><span class="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium">Verified</span></td>
+                                                <td class="py-3.5 px-4 text-right">
+                                                    <button class="text-slate-600 hover:text-slate-900 font-medium text-xs bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 transition">View Form</button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Admin Security Settings -->
-                <div class="card card-stat p-4 bg-white mt-4">
-                    <h5 class="fw-bold mb-3"><i class="fas fa-lock me-2"></i> Admin Security</h5>
-                    <form action="{{ url_for('admin_change_password') }}" method="POST" class="row g-3">
-                        <div class="col-md-4">
-                            <input type="password" name="new_password" class="form-control" placeholder="New Admin Password" required>
+                    </div>
+
+                    <!-- Right Column: Printable Receipts & Staff Ledger Password Tools -->
+                    <div class="space-y-8">
+                        
+                        <!-- Printable Receipts Module -->
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+                                    <i class="fa-solid fa-receipt text-indigo-600"></i>
+                                    <span>Printable Receipts</span>
+                                </h3>
+                                <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Thermal / A5</span>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Search Receipt or Voucher</label>
+                                    <div class="relative">
+                                        <input type="text" placeholder="Enter Transaction Code..." class="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-700 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
+                                    </div>
+                                </div>
+                                <div class="p-4 bg-slate-50 rounded-lg border border-dashed border-slate-300 space-y-2 text-sm">
+                                    <div class="flex justify-between text-xs text-slate-500">
+                                        <span>Receipt #CBV-RCP-9041</span>
+                                        <span>2026-07-21</span>
+                                    </div>
+                                    <div class="flex justify-between font-bold text-slate-800">
+                                        <span>Member: Nalwanga Grace</span>
+                                        <span class="text-indigo-600 font-mono">UGX 850,000</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500">Purpose: Quarterly Rotation Contribution & Savings Deposit.</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-lg text-xs transition flex items-center justify-center space-x-1.5">
+                                        <i class="fa-solid fa-eye"></i>
+                                        <span>Preview PDF</span>
+                                    </button>
+                                    <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-xs transition flex items-center justify-center space-x-1.5 shadow-sm">
+                                        <i class="fa-solid fa-print"></i>
+                                        <span>Print Receipt</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-dark w-100">Update Password</button>
+
+                        <!-- Staff Ledger & Password Management Tools -->
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+                                    <i class="fa-solid fa-user-shield text-indigo-600"></i>
+                                    <span>Staff Ledger Passwords</span>
+                                </h3>
+                                <span class="text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded font-medium">Restricted</span>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Select Staff Account</label>
+                                    <select class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option>Philis (HR Manager Ledger)</option>
+                                        <option>Kato James (Cashier Ledger)</option>
+                                        <option>Namubiru Brenda (Loans Ledger)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Action Mode</label>
+                                    <select class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option>Generate Temporary Reset Token</option>
+                                        <option>Force Password Expiry & Update</option>
+                                        <option>Unlock Suspended Ledger Access</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Master Admin Password Confirmation</label>
+                                    <input type="password" placeholder="••••••••••••" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <button class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 rounded-lg text-xs transition shadow flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-key"></i>
+                                    <span>Execute Staff Credential Update</span>
+                                </button>
+                            </div>
                         </div>
-                    </form>
-                </div>
 
-            <!-- TAB 2: MEMBERS -->
-            {% elif active_tab == 'members' %}
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="fw-bold">SACCO Members Directory</h2>
-                    <form action="{{ url_for('admin_members') }}" method="GET" class="d-flex">
-                        <input type="text" name="q" class="form-control me-2" placeholder="Search member..." value="{{ search_query }}">
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
-                    </form>
-                </div>
-                <div class="card card-stat p-4 bg-white">
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead><tr><th>Full Name</th><th>Username</th><th>Phone</th><th>NIN</th><th>Status</th><th>Staff Password Reset</th></tr></thead>
-                            <tbody>
-                                {% for m in staff_list %}
-                                <tr>
-                                    <td>{{ m.full_name }}</td>
-                                    <td>{{ m.username }}</td>
-                                    <td>{{ m.phone or 'N/A' }}</td>
-                                    <td>{{ m.nin or 'N/A' }}</td>
-                                    <td><span class="badge bg-success">{{ m.status or 'Approved' }}</span></td>
-                                    <td>
-                                        <form action="{{ url_for('reset_password', username=m.username) }}" method="POST" class="d-flex gap-2">
-                                            <input type="text" name="new_password" class="form-control form-control-sm" placeholder="New pass" required style="width: 120px;">
-                                            <button type="submit" class="btn btn-sm btn-outline-dark">Reset</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
                     </div>
+
                 </div>
 
-            <!-- TAB 3: ACCOUNTS -->
-            {% elif active_tab == 'accounts' %}
-                <h2 class="mb-4 fw-bold">Accounts Overview</h2>
-                <div class="row g-4 mb-4">
-                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Approved Deposits</h6><h3 class="text-success">UGX {{ "{:,.2f}".format(approved) }}</h3></div></div>
-                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Pending Deposits</h6><h3 class="text-warning">UGX {{ "{:,.2f}".format(pending) }}</h3></div></div>
-                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Total Paid Out</h6><h3 class="text-danger">UGX {{ "{:,.2f}".format(total_paid_out) }}</h3></div></div>
-                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>SACCO Reserve Balance</h6><h3 class="text-primary">UGX {{ "{:,.2f}".format(reserve_vault) }}</h3></div></div>
-                </div>
-                <div class="card card-stat p-4 bg-white">
-                    <h5 class="fw-bold mb-3">All Member Transactions Ledger</h5>
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead><tr><th>ID</th><th>Username</th><th>Amount</th><th>Frequency</th><th>Date</th><th>Status</th></tr></thead>
-                            <tbody>
-                                {% for t in transactions %}
-                                <tr>
-                                    <td>#{{ t.id }}</td>
-                                    <td>{{ t.username }}</td>
-                                    <td>UGX {{ "{:,.2f}".format(t.amount) }}</td>
-                                    <td>{{ t.frequency }}</td>
-                                    <td>{{ t.date }}</td>
-                                    <td><span class="badge bg-{% if t.status == 'approved' %}success{% else %}warning{% endif %}">{{ t.status }}</span></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            </main>
 
-            <!-- TAB 4: SHARES -->
-            {% elif active_tab == 'shares' %}
-                <h2 class="mb-4 fw-bold">Shares Allocation</h2>
-                <div class="card card-stat p-4 bg-white">
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead><tr><th>Member Name</th><th>Username</th><th>Shares Status</th></tr></thead>
-                            <tbody>
-                                {% for s in staff_list %}
-                                <tr>
-                                    <td>{{ s.full_name }}</td>
-                                    <td>{{ s.username }}</td>
-                                    <td><span class="badge bg-info text-dark">Active Shareholder</span></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            <!-- TAB 5: LOANS -->
-            {% elif active_tab == 'loans' %}
-                <h2 class="mb-4 fw-bold">SACCO Loans Management</h2>
-                <div class="card card-stat p-4 bg-white">
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead><tr><th>Loan ID</th><th>Borrower Username</th><th>Initial Amount</th><th>Balance to Return</th><th>Status</th><th>Action</th></tr></thead>
-                            <tbody>
-                                {% for l in loans %}
-                                <tr>
-                                    <td>#{{ l.id }}</td>
-                                    <td>{{ l.username }}</td>
-                                    <td>UGX {{ "{:,.2f}".format(l.amount) }}</td>
-                                    <td class="fw-bold text-danger">UGX {{ "{:,.2f}".format(l.balance) }}</td>
-                                    <td><span class="badge bg-{% if l.status == 'cleared' %}success{% else %}warning{% endif %}">{{ l.status }}</span></td>
-                                    <td>
-                                        {% if l.status != 'cleared' %}
-                                        <a href="{{ url_for('clear_loan', loan_id=l.id) }}" class="btn btn-sm btn-success">Clear Loan</a>
-                                        {% else %}
-                                        <span class="text-muted">Cleared</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr><td colspan="6" class="text-center text-muted">No loan records found.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            <!-- TAB 6: SAVINGS -->
-            {% elif active_tab == 'savings' %}
-                <h2 class="mb-4 fw-bold">Member Savings & Rotation Pool</h2>
-                <div class="card card-stat p-4 bg-white">
-                    <p class="text-muted">Excess funds remaining after loan deductions are retained securely here for each member until distributed at the end of the rotation cycle.</p>
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead><tr><th>Member</th><th>Username</th><th>Retention Pool Status</th></tr></thead>
-                            <tbody>
-                                {% for s in staff_list %}
-                                <tr>
-                                    <td>{{ s.full_name }}</td>
-                                    <td>{{ s.username }}</td>
-                                    <td><span class="badge bg-primary">Managed in Rotation Pool</span></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            <!-- TAB 7: TRANSACTIONS -->
-            {% elif active_tab == 'transactions' %}
-                <h2 class="mb-4 fw-bold">Transaction Receipts & Records</h2>
-                <div class="card card-stat p-4 bg-white mb-4">
-                    <h5 class="fw-bold mb-3"><i class="fas fa-arrow-down text-success me-2"></i> Deposit Receipts</h5>
-                    <table class="table align-middle">
-                        <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
-                        <tbody>
-                            {% for t in transactions %}
-                            <tr><td>#{{ t.id }}</td><td>{{ t.username }}</td><td>UGX {{ "{:,.2f}".format(t.amount) }}</td><td>{{ t.date }}</td><td>{{ t.status }}</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="card card-stat p-4 bg-white">
-                    <h5 class="fw-bold mb-3"><i class="fas fa-arrow-up text-danger me-2"></i> Payout Receipts</h5>
-                    <table class="table align-middle">
-                        <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Date</th><th>Notes</th></tr></thead>
-                        <tbody>
-                            {% for p in payout_history %}
-                            <tr><td>#{{ p.id }}</td><td>{{ p.username }}</td><td>UGX {{ "{:,.2f}".format(p.amount) }}</td><td>{{ p.date }}</td><td>{{ p.notes }}</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-            <!-- TAB 8: REPORTS -->
-            {% elif active_tab == 'reports' %}
-                <h2 class="mb-4 fw-bold">SACCO Reports & Summaries</h2>
-                <div class="card card-stat p-4 bg-white">
-                    <h5 class="fw-bold mb-3">Complete Payout & Transaction Summary</h5>
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead><tr><th>Payout ID</th><th>Recipient</th><th>Disbursed Amount</th><th>Date</th><th>Notes</th></tr></thead>
-                            <tbody>
-                                {% for p in payout_history %}
-                                <tr>
-                                    <td>#{{ p.id }}</td>
-                                    <td>{{ p.username }}</td>
-                                    <td>UGX {{ "{:,.2f}".format(p.amount) }}</td>
-                                    <td>{{ p.date }}</td>
-                                    <td>{{ p.notes }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            {% endif %}
+            <!-- Footer -->
+            <footer class="bg-white border-t border-slate-200 py-4 px-8 mt-auto text-center text-xs text-slate-400">
+                &copy; 2026 Canan Bbosa Ventures. All Rights Reserved. SACCO Financial Systems v4.2.
+            </footer>
 
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
