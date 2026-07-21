@@ -95,12 +95,24 @@ init_db()
 
 @app.route('/')
 def home():
+    if 'user' in session:
+        user_role = str(session['user'].get('role', '')).lower().strip()
+        if user_role == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('staff_dashboard'))
     return redirect(url_for('login'))
 
 
 # --- LOGIN ROUTE ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # If already logged in, redirect to respective dashboard immediately
+    if request.method == 'GET' and 'user' in session:
+        role = str(session['user'].get('role', '')).lower().strip()
+        if role == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('staff_dashboard'))
+
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
@@ -123,17 +135,27 @@ def login():
                 raw_status = user_dict.get('status')
                 status = str(raw_status).lower().strip() if raw_status else 'approved'
                 
-                session['user'] = user_dict
-                
-                if role == 'admin':
-                    return redirect(url_for('admin_dashboard'))
-                
-                if status in ['approved', 'none', 'null', '']:
-                    return redirect(url_for('staff_dashboard'))
-                else:
+                if role != 'admin' and status not in ['approved', 'none', 'null', '']:
                     session.clear()
                     flash('Your account is pending admin approval.', 'warning')
                     return redirect(url_for('login'))
+
+                # CLEAR EXISTING SESSION TO PREVENT CROSS-ROLE BLEEDING
+                session.clear()
+                
+                # STORE CLEAN SESSION
+                session['user'] = {
+                    'id': user_dict.get('id'),
+                    'full_name': user_dict.get('full_name'),
+                    'username': str(user_dict.get('username')).strip(),
+                    'role': role,
+                    'status': status
+                }
+                
+                if role == 'admin':
+                    return redirect(url_for('admin_dashboard'))
+                else:
+                    return redirect(url_for('staff_dashboard'))
             else:
                 flash('Invalid username or password.', 'danger')
                 return redirect(url_for('login'))
@@ -196,17 +218,28 @@ def staff_dashboard():
     if 'user' not in session:
         return redirect(url_for('login'))
         
-    user = session.get('user', {})
-    role = str(user.get('role', 'staff')).lower().strip()
+    username = session['user'].get('username', '').strip()
+    
+    # RE-VERIFY ROLE DIRECTLY FROM DB TO PREVENT CACHED ADMIN ESCALATION
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s))", (username,))
+    db_user = cur.fetchone()
+
+    if not db_user:
+        cur.close()
+        conn.close()
+        session.clear()
+        return redirect(url_for('login'))
+
+    user_dict = dict(db_user)
+    role = str(user_dict.get('role', 'staff')).lower().strip()
 
     # Route protection: Send admin back to admin area
     if role == 'admin':
+        cur.close()
+        conn.close()
         return redirect(url_for('admin_dashboard'))
-
-    username = user.get('username', '').strip()
-    
-    conn = get_db_connection()
-    cur = conn.cursor()
 
     # Deposit Submission
     if request.method == 'POST':
@@ -227,6 +260,9 @@ def staff_dashboard():
                 flash(f'Failed to submit deposit: {e}', 'danger')
         else:
             flash('Please enter a valid deposit amount.', 'danger')
+        
+        cur.close()
+        conn.close()
         return redirect(url_for('staff_dashboard'))
 
     # Fetch User Transactions
@@ -275,7 +311,7 @@ def staff_dashboard():
     
     return render_template(
         'staff.html', 
-        user=user, 
+        user=user_dict, 
         transactions=user_txs, 
         balance=balance, 
         my_payouts=my_payouts
@@ -292,11 +328,21 @@ def make_payment():
 # --- ADMIN DASHBOARD ---
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_dashboard():
-    if 'user' not in session or str(session['user'].get('role')).lower().strip() != 'admin':
+    if 'user' not in session:
         return redirect(url_for('login'))
         
+    username = session['user'].get('username', '').strip()
+    
+    # RE-VERIFY ROLE DIRECTLY FROM DB TO PREVENT NON-ADMIN ACCESS
     conn = get_db_connection()
     cur = conn.cursor()
+    cur.execute("SELECT role FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s))", (username,))
+    db_user = cur.fetchone()
+
+    if not db_user or str(db_user.get('role')).lower().strip() != 'admin':
+        cur.close()
+        conn.close()
+        return redirect(url_for('staff_dashboard'))
     
     try:
         cur.execute("SELECT * FROM users WHERE LOWER(TRIM(status)) = 'pending' AND (LOWER(TRIM(role)) != 'admin' OR role IS NULL)")
