@@ -3,260 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unity SACCO - Admin Dashboard</title>
+    <title>Admin Dashboard - Canan Bbosa Ventures SACCO</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --sidebar-bg: #0f172a;
-            --sidebar-active: #2563eb;
-            --sidebar-text: #94a3b8;
-            --main-bg: #f8fafc;
-            --card-bg: #ffffff;
-        }
-        body {
-            background-color: var(--main-bg);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            overflow-x: hidden;
-        }
-        .sidebar {
-            width: 250px;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: var(--sidebar-bg);
-            color: #fff;
-            padding: 20px 12px;
-            display: flex;
-            flex-direction: column;
-            z-index: 100;
-        }
-        .sidebar .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.2rem;
-            font-weight: 800;
-            padding: 10px 12px 25px 12px;
-            color: #ffffff;
-            letter-spacing: 0.5px;
-        }
-        .sidebar .brand i { font-size: 1.5rem; color: #38bdf8; }
-        .sidebar a {
-            color: var(--sidebar-text);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 14px;
-            border-radius: 8px;
-            margin-bottom: 4px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        .sidebar a:hover, .sidebar a.active {
-            background: var(--sidebar-active);
-            color: #ffffff;
-        }
-        .sidebar a i { width: 18px; text-align: center; }
-        .sidebar .logout-link { margin-top: auto; color: #f87171; }
-        .sidebar .logout-link:hover { background: #991b1b; color: #fff; }
-        
-        .main-content {
-            margin-left: 250px;
-            padding: 25px 35px;
-            min-height: 100vh;
-        }
-        .top-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-        .stat-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 18px 20px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-        }
-        .stat-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-        }
-        .card-custom {
-            background: #ffffff;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-            padding: 22px;
-        }
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .sidebar { min-height: 100vh; background-color: #111827; color: #fff; position: fixed; width: 260px; top: 0; left: 0; z-index: 100; }
+        .sidebar .brand { padding: 20px; font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid #1f2937; color: #38bdf8; }
+        .sidebar .nav-link { color: #9ca3af; padding: 12px 20px; margin: 4px 12px; border-radius: 8px; transition: 0.2s; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: #2563eb; color: #fff; }
+        .main-content { margin-left: 260px; padding: 30px; }
+        .card-stat { border: none; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar Navigation -->
-    <div class="sidebar">
-        <div class="brand">
-            <i class="fa-solid fa-layer-group"></i>
-            <span>UNITY SACCO</span>
+    <!-- Sidebar -->
+    <div class="sidebar d-flex flex-column justify-content-between">
+        <div>
+            <div class="brand"><i class="fas fa-university me-2"></i> UNITY SACCO</div>
+            <ul class="nav flex-column mt-3">
+                <li class="nav-item"><a href="{{ url_for('admin_dashboard') }}" class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}"><i class="fas fa-home me-2"></i> Dashboard</a></li>
+                <li class="nav-item"><a href="{{ url_for('admin_members') }}" class="nav-link {% if active_tab == 'members' %}active{% endif %}"><i class="fas fa-users me-2"></i> Members</a></li>
+                <li class="nav-item"><a href="{{ url_for('admin_accounts') }}" class="nav-link {% if active_tab == 'accounts' %}active{% endif %}"><i class="fas fa-wallet me-2"></i> Accounts</a></li>
+                <li class="nav-item"><a href="{{ url_for('admin_shares') }}" class="nav-link {% if active_tab == 'shares' %}active{% endif %}"><i class="fas fa-chart-pie me-2"></i> Shares</a></li>
+                <li class="nav-item"><a href="{{ url_for('admin_loans') }}" class="nav-link {% if active_tab == 'loans' %}active{% endif %}"><i class="fas fa-hand-holding-usd me-2"></i> Loans</a></li>
+                <li class="nav-item"><a href="{{ url_for('admin_savings') }}" class="nav-link {% if active_tab == 'savings' %}active{% endif %}"><i class="fas fa-piggy-bank me-2"></i> Savings</a></li>
+                <li class="nav-item"><a href="{{ url_for('admin_transactions') }}" class="nav-link {% if active_tab == 'transactions' %}active{% endif %}"><i class="fas fa-exchange-alt me-2"></i> Transactions</a></li>
+                <li class="nav-item"><a href="{{ url_for('admin_reports') }}" class="nav-link {% if active_tab == 'reports' %}active{% endif %}"><i class="fas fa-file-alt me-2"></i> Reports</a></li>
+            </ul>
         </div>
-        <a href="#" class="active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
-        <a href="#"><i class="fa-solid fa-users"></i> Members</a>
-        <a href="#"><i class="fa-solid fa-wallet"></i> Accounts</a>
-        <a href="#"><i class="fa-solid fa-chart-line"></i> Shares</a>
-        <a href="#"><i class="fa-solid fa-hand-holding-dollar"></i> Loans</a>
-        <a href="#"><i class="fa-solid fa-piggy-bank"></i> Savings</a>
-        <a href="#"><i class="fa-solid fa-list-check"></i> Transactions</a>
-        <a href="#"><i class="fa-solid fa-file-invoice"></i> Reports</a>
-        <a href="{{ url_for('logout') }}" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+        <div class="p-3 border-top border-secondary">
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger w-100"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
+        </div>
     </div>
 
-    <!-- Main Content Area -->
+    <!-- Main Content -->
     <div class="main-content">
-        
-        <!-- Header -->
-        <div class="top-nav">
-            <div>
-                <h4 class="fw-bold m-0 text-dark">Admin Dashboard</h4>
-                <small class="text-muted">Manage, Monitor, and Grow your SACCO efficiently.</small>
-            </div>
-            <div class="d-flex align-items-center gap-3">
-                <span class="badge bg-primary px-3 py-2 fs-6">Super Admin</span>
-            </div>
-        </div>
+        <div class="container-fluid">
+            
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
 
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+            <!-- TAB 1: DASHBOARD -->
+            {% if active_tab == 'dashboard' %}
+                <h2 class="mb-4 fw-bold">Admin Dashboard</h2>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Approved Deposits</h6><h3 class="text-success">UGX {{ "{:,.2f}".format(approved) }}</h3></div></div>
+                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Pending Deposits</h6><h3 class="text-warning">UGX {{ "{:,.2f}".format(pending) }}</h3></div></div>
+                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Total Paid Out</h6><h3 class="text-danger">UGX {{ "{:,.2f}".format(total_paid_out) }}</h3></div></div>
+                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Reserve Vault</h6><h3 class="text-primary">UGX {{ "{:,.2f}".format(reserve_vault) }}</h3></div></div>
+                </div>
 
-        <!-- Quick Stats Overview -->
-        <div class="row g-4 mb-4">
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <small class="text-muted fw-bold">APPROVED DEPOSITS</small>
-                    <h3 class="fw-bold mt-2 text-success">UGX {{ "{:,.2f}".format(approved) }}</h3>
+                <!-- Pending Approvals -->
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card card-stat p-4 bg-white">
+                            <h5 class="fw-bold mb-3"><i class="fas fa-user-clock text-warning me-2"></i> Pending Member Registrations</h5>
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead><tr><th>Name</th><th>Username</th><th>Action</th></tr></thead>
+                                    <tbody>
+                                        {% for u in pending_users %}
+                                        <tr>
+                                            <td>{{ u.full_name }}</td>
+                                            <td>{{ u.username }}</td>
+                                            <td><a href="{{ url_for('approve_user', username=u.username) }}" class="btn btn-sm btn-success">Approve</a></td>
+                                        </tr>
+                                        {% else %}
+                                        <tr><td colspan="3" class="text-center text-muted">No pending registrations.</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card card-stat p-4 bg-white">
+                            <h5 class="fw-bold mb-3"><i class="fas fa-receipt text-warning me-2"></i> Pending Payment Requests</h5>
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead><tr><th>User</th><th>Amount</th><th>Action</th></tr></thead>
+                                    <tbody>
+                                        {% for tx in pending_txs %}
+                                        <tr>
+                                            <td>{{ tx.username }}</td>
+                                            <td>UGX {{ "{:,.2f}".format(tx.amount) }}</td>
+                                            <td><a href="{{ url_for('approve_tx', tx_id=tx.id) }}" class="btn btn-sm btn-success">Approve Payment</a></td>
+                                        </tr>
+                                        {% else %}
+                                        <tr><td colspan="3" class="text-center text-muted">No pending payment requests.</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <small class="text-muted fw-bold">PENDING DEPOSITS</small>
-                    <h3 class="fw-bold mt-2 text-warning">UGX {{ "{:,.2f}".format(pending) }}</h3>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <small class="text-muted fw-bold">TOTAL PAID OUT</small>
-                    <h3 class="fw-bold mt-2 text-danger">UGX {{ "{:,.2f}".format(total_paid_out) }}</h3>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <small class="text-muted fw-bold">RESERVE VAULT</small>
-                    <h3 class="fw-bold mt-2 text-primary">UGX {{ "{:,.2f}".format(reserve_vault) }}</h3>
-                </div>
-            </div>
-        </div>
 
-        <!-- Pending Approvals Section -->
-        <div class="card-custom mb-4">
-            <h5 class="fw-bold mb-3"><i class="fa-solid fa-user-clock text-warning me-2"></i> Pending User Registrations</h5>
-            <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Name</th>
-                            <th>Username</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in pending_users %}
-                        <tr>
-                            <td class="fw-semibold">{{ user.full_name }}</td>
-                            <td>{{ user.username }}</td>
-                            <td><span class="badge bg-warning text-dark">Pending</span></td>
-                            <td>
-                                <a href="{{ url_for('approve_user', username=user.username) }}" class="btn btn-sm btn-success"><i class="fa-solid fa-check"></i> Approve</a>
-                                <a href="{{ url_for('delete_user', username=user.username) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this user?');"><i class="fa-solid fa-trash"></i></a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-3">No pending registration requests.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                <!-- Admin Security Settings -->
+                <div class="card card-stat p-4 bg-white mt-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-lock me-2"></i> Admin Security</h5>
+                    <form action="{{ url_for('admin_change_password') }}" method="POST" class="row g-3">
+                        <div class="col-md-4">
+                            <input type="password" name="new_password" class="form-control" placeholder="New Admin Password" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-dark w-100">Update Password</button>
+                        </div>
+                    </form>
+                </div>
 
-        <!-- All Transactions Queue -->
-        <div class="card-custom">
-            <h5 class="fw-bold mb-3"><i class="fa-solid fa-list-check text-primary me-2"></i> Transaction History</h5>
-            <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead class="table-light">
-                        ID
-                        <tr>
-                            <th>#</th>
-                            <th>Username</th>
-                            <th>Amount (UGX)</th>
-                            <th>Frequency</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for tx in transactions %}
-                        <tr>
-                            <td>{{ tx.id }}</td>
-                            <td class="fw-semibold">{{ tx.username }}</td>
-                            <td>{{ "{:,.2f}".format(tx.amount) }}</td>
-                            <td>{{ tx.frequency }}</td>
-                            <td>{{ tx.date }}</td>
-                            <td>
-                                {% if tx.status == 'approved' %}
-                                    <span class="badge bg-success">Approved</span>
+            <!-- TAB 2: MEMBERS -->
+            {% elif active_tab == 'members' %}
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="fw-bold">SACCO Members Directory</h2>
+                    <form action="{{ url_for('admin_members') }}" method="GET" class="d-flex">
+                        <input type="text" name="q" class="form-control me-2" placeholder="Search member..." value="{{ search_query }}">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
+                    </form>
+                </div>
+                <div class="card card-stat p-4 bg-white">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead><tr><th>Full Name</th><th>Username</th><th>Phone</th><th>NIN</th><th>Status</th><th>Staff Password Reset</th></tr></thead>
+                            <tbody>
+                                {% for m in staff_list %}
+                                <tr>
+                                    <td>{{ m.full_name }}</td>
+                                    <td>{{ m.username }}</td>
+                                    <td>{{ m.phone or 'N/A' }}</td>
+                                    <td>{{ m.nin or 'N/A' }}</td>
+                                    <td><span class="badge bg-success">{{ m.status or 'Approved' }}</span></td>
+                                    <td>
+                                        <form action="{{ url_for('reset_password', username=m.username) }}" method="POST" class="d-flex gap-2">
+                                            <input type="text" name="new_password" class="form-control form-control-sm" placeholder="New pass" required style="width: 120px;">
+                                            <button type="submit" class="btn btn-sm btn-outline-dark">Reset</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            <!-- TAB 3: ACCOUNTS -->
+            {% elif active_tab == 'accounts' %}
+                <h2 class="mb-4 fw-bold">Accounts Overview</h2>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Approved Deposits</h6><h3 class="text-success">UGX {{ "{:,.2f}".format(approved) }}</h3></div></div>
+                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Pending Deposits</h6><h3 class="text-warning">UGX {{ "{:,.2f}".format(pending) }}</h3></div></div>
+                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>Total Paid Out</h6><h3 class="text-danger">UGX {{ "{:,.2f}".format(total_paid_out) }}</h3></div></div>
+                    <div class="col-md-3"><div class="card card-stat p-3 bg-white"><h6>SACCO Reserve Balance</h6><h3 class="text-primary">UGX {{ "{:,.2f}".format(reserve_vault) }}</h3></div></div>
+                </div>
+                <div class="card card-stat p-4 bg-white">
+                    <h5 class="fw-bold mb-3">All Member Transactions Ledger</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead><tr><th>ID</th><th>Username</th><th>Amount</th><th>Frequency</th><th>Date</th><th>Status</th></tr></thead>
+                            <tbody>
+                                {% for t in transactions %}
+                                <tr>
+                                    <td>#{{ t.id }}</td>
+                                    <td>{{ t.username }}</td>
+                                    <td>UGX {{ "{:,.2f}".format(t.amount) }}</td>
+                                    <td>{{ t.frequency }}</td>
+                                    <td>{{ t.date }}</td>
+                                    <td><span class="badge bg-{% if t.status == 'approved' %}success{% else %}warning{% endif %}">{{ t.status }}</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            <!-- TAB 4: SHARES -->
+            {% elif active_tab == 'shares' %}
+                <h2 class="mb-4 fw-bold">Shares Allocation</h2>
+                <div class="card card-stat p-4 bg-white">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead><tr><th>Member Name</th><th>Username</th><th>Shares Status</th></tr></thead>
+                            <tbody>
+                                {% for s in staff_list %}
+                                <tr>
+                                    <td>{{ s.full_name }}</td>
+                                    <td>{{ s.username }}</td>
+                                    <td><span class="badge bg-info text-dark">Active Shareholder</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            <!-- TAB 5: LOANS -->
+            {% elif active_tab == 'loans' %}
+                <h2 class="mb-4 fw-bold">SACCO Loans Management</h2>
+                <div class="card card-stat p-4 bg-white">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead><tr><th>Loan ID</th><th>Borrower Username</th><th>Initial Amount</th><th>Balance to Return</th><th>Status</th><th>Action</th></tr></thead>
+                            <tbody>
+                                {% for l in loans %}
+                                <tr>
+                                    <td>#{{ l.id }}</td>
+                                    <td>{{ l.username }}</td>
+                                    <td>UGX {{ "{:,.2f}".format(l.amount) }}</td>
+                                    <td class="fw-bold text-danger">UGX {{ "{:,.2f}".format(l.balance) }}</td>
+                                    <td><span class="badge bg-{% if l.status == 'cleared' %}success{% else %}warning{% endif %}">{{ l.status }}</span></td>
+                                    <td>
+                                        {% if l.status != 'cleared' %}
+                                        <a href="{{ url_for('clear_loan', loan_id=l.id) }}" class="btn btn-sm btn-success">Clear Loan</a>
+                                        {% else %}
+                                        <span class="text-muted">Cleared</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
                                 {% else %}
-                                    <span class="badge bg-warning text-dark">Pending</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if tx.status != 'approved' %}
-                                    <a href="{{ url_for('approve_tx', tx_id=tx.id) }}" class="btn btn-sm btn-success">Confirm</a>
-                                {% endif %}
-                                <a href="{{ url_for('delete_tx', tx_id=tx.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete transaction?');"><i class="fa-solid fa-trash"></i></a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-3">No transactions found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                                <tr><td colspan="6" class="text-center text-muted">No loan records found.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
+            <!-- TAB 6: SAVINGS -->
+            {% elif active_tab == 'savings' %}
+                <h2 class="mb-4 fw-bold">Member Savings & Rotation Pool</h2>
+                <div class="card card-stat p-4 bg-white">
+                    <p class="text-muted">Excess funds remaining after loan deductions are retained securely here for each member until distributed at the end of the rotation cycle.</p>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead><tr><th>Member</th><th>Username</th><th>Retention Pool Status</th></tr></thead>
+                            <tbody>
+                                {% for s in staff_list %}
+                                <tr>
+                                    <td>{{ s.full_name }}</td>
+                                    <td>{{ s.username }}</td>
+                                    <td><span class="badge bg-primary">Managed in Rotation Pool</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            <!-- TAB 7: TRANSACTIONS -->
+            {% elif active_tab == 'transactions' %}
+                <h2 class="mb-4 fw-bold">Transaction Receipts & Records</h2>
+                <div class="card card-stat p-4 bg-white mb-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-arrow-down text-success me-2"></i> Deposit Receipts</h5>
+                    <table class="table align-middle">
+                        <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
+                        <tbody>
+                            {% for t in transactions %}
+                            <tr><td>#{{ t.id }}</td><td>{{ t.username }}</td><td>UGX {{ "{:,.2f}".format(t.amount) }}</td><td>{{ t.date }}</td><td>{{ t.status }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card card-stat p-4 bg-white">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-arrow-up text-danger me-2"></i> Payout Receipts</h5>
+                    <table class="table align-middle">
+                        <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Date</th><th>Notes</th></tr></thead>
+                        <tbody>
+                            {% for p in payout_history %}
+                            <tr><td>#{{ p.id }}</td><td>{{ p.username }}</td><td>UGX {{ "{:,.2f}".format(p.amount) }}</td><td>{{ p.date }}</td><td>{{ p.notes }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            <!-- TAB 8: REPORTS -->
+            {% elif active_tab == 'reports' %}
+                <h2 class="mb-4 fw-bold">SACCO Reports & Summaries</h2>
+                <div class="card card-stat p-4 bg-white">
+                    <h5 class="fw-bold mb-3">Complete Payout & Transaction Summary</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead><tr><th>Payout ID</th><th>Recipient</th><th>Disbursed Amount</th><th>Date</th><th>Notes</th></tr></thead>
+                            <tbody>
+                                {% for p in payout_history %}
+                                <tr>
+                                    <td>#{{ p.id }}</td>
+                                    <td>{{ p.username }}</td>
+                                    <td>UGX {{ "{:,.2f}".format(p.amount) }}</td>
+                                    <td>{{ p.date }}</td>
+                                    <td>{{ p.notes }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
