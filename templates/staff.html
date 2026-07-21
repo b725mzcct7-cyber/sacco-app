@@ -3,197 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SACCO - Staff Dashboard</title>
+    <title>Unity SACCO - Member Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #f4f6f9; color: #333; }
-        .navbar { background: #1e3c72; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-        .navbar a { color: white; text-decoration: none; background: rgba(255,255,255,0.2); padding: 7px 14px; border-radius: 4px; font-size: 13px; font-weight: 600; }
-        .navbar a:hover { background: rgba(255,255,255,0.3); }
-        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
-        .card { background: white; padding: 22px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 25px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        .balance-box { background: #27ae60; color: white; padding: 20px; border-radius: 8px; text-align: center; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
-        th { background: #fafafa; color: #666; font-weight: 600; }
-        
-        input, select {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            background-color: #fff !important;
-            color: #111 !important;
-            font-size: 14px;
+        :root {
+            --sidebar-bg: #0d9488;
+            --sidebar-active: #0f766e;
+            --sidebar-text: #ccfbf1;
+            --main-bg: #f8fafc;
+            --card-bg: #ffffff;
         }
-
-        .btn-submit { background: #1e3c72; color: white; padding: 10px 18px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
-        .btn-submit:hover { background: #2a5298; }
-        .btn-receipt { background: #8e44ad; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold; border: none; cursor: pointer; }
-        .btn-receipt:hover { background: #732d91; }
-
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-        .badge-success { background: #e8f8f0; color: #27ae60; }
-        .badge-warning { background: #fef9e7; color: #f39c12; }
-        .badge-paid { background: #8e44ad; color: white; }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100; }
-        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 420px; }
-        .receipt-card { border: 2px dashed #8e44ad; padding: 20px; background: #faf8ff; border-radius: 8px; }
+        body {
+            background-color: var(--main-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+        }
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: var(--sidebar-bg);
+            color: #fff;
+            padding: 20px 12px;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+        .sidebar .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            padding: 10px 12px 25px 12px;
+            color: #ffffff;
+        }
+        .sidebar a {
+            color: var(--sidebar-text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background: var(--sidebar-active);
+            color: #ffffff;
+        }
+        .sidebar a i { width: 18px; text-align: center; }
+        .sidebar .logout-link { margin-top: auto; color: #fecdd3; }
+        .sidebar .logout-link:hover { background: #be123c; color: #fff; }
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 25px 35px;
+            min-height: 100vh;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
     </style>
 </head>
 <body>
-    <div class="navbar">
-        <h2>SACCO Member Dashboard</h2>
-        <a href="/logout">Logout</a>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="brand">
+            <i class="fa-solid fa-users"></i>
+            <span>UNITY SACCO</span>
+        </div>
+        <a href="#" class="active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
+        <a href="#"><i class="fa-solid fa-user"></i> My Profile</a>
+        <a href="#"><i class="fa-solid fa-wallet"></i> My Accounts</a>
+        <a href="#"><i class="fa-solid fa-chart-line"></i> Shares</a>
+        <a href="#"><i class="fa-solid fa-piggy-bank"></i> Savings</a>
+        <a href="#"><i class="fa-solid fa-hand-holding-dollar"></i> Loans</a>
+        <a href="#"><i class="fa-solid fa-list-check"></i> Transactions</a>
+        <a href="#"><i class="fa-solid fa-file-lines"></i> Statements</a>
+        <a href="{{ url_for('logout') }}" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
     </div>
 
-    <!-- Staff Receipt View Modal -->
-    <div id="receiptModal" class="modal">
-        <div class="modal-content receipt-card">
-            <h3 style="text-align: center; color: #8e44ad;">🧾 SACCO PAYOUT RECEIPT</h3>
-            <hr style="margin: 10px 0;">
-            <p><strong>Receipt No:</strong> <span id="r_id"></span></p>
-            <p><strong>Recipient:</strong> <span id="r_name" style="font-weight: bold;"></span></p>
-            <p><strong>Status:</strong> <span class="badge badge-paid">PAID OUT</span></p>
-            <p style="margin-top: 5px;"><strong>Disbursed Amount:</strong> <span id="r_amount" style="font-weight: bold; color: #27ae60; font-size: 16px;"></span></p>
-            <p><strong>Date Disbursed:</strong> <span id="r_date"></span></p>
-            <p><strong>Cycle:</strong> <span id="r_cycle"></span></p>
-            <hr style="margin: 10px 0;">
-            <button onclick="window.print()" class="btn-receipt" style="width: 100%; padding: 8px;">🖨️ Print Receipt</button>
-            <button onclick="toggleModal()" style="width: 100%; background: #ccc; color: #333; margin-top: 8px; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Close</button>
-        </div>
-    </div>
-
-    <div class="container">
-        <!-- Staff Profile & Total Balance -->
-        <div class="grid-2">
-            <div class="card">
-                <h3>Welcome, {{ user.full_name if user.full_name is defined else user.username }}! 👋</h3>
-                <p style="font-size: 13px; color: #666; margin-top: 8px;"><strong>Phone:</strong> {{ user.phone if user.phone is defined else 'N/A' }}</p>
-                <p style="font-size: 13px; color: #666; margin-top: 4px;"><strong>NIN:</strong> {{ user.national_id if user.national_id is defined else 'N/A' }}</p>
+    <!-- Main Content Area -->
+    <div class="main-content">
+        
+        <!-- Header Profile Banner -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-7">
+                <div class="stat-card h-100 d-flex align-items-center justify-content-between">
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">Welcome, {{ session.get('user_name', 'MEMBER') }}! 👋</h4>
+                        <span class="text-muted me-3"><i class="fa-solid fa-phone me-1"></i> Phone: N/A</span>
+                        <span class="text-muted"><i class="fa-solid fa-id-card me-1"></i> NIN: N/A</span>
+                    </div>
+                </div>
             </div>
-            
-            <div class="balance-box">
-                <h4>Approved Contribution Balance</h4>
-                <h1 style="margin-top: 10px;">UGX {{ "{:,.2f}".format(balance if balance is defined else 0) }}</h1>
+            <div class="col-md-5">
+                <div class="stat-card bg-success text-white h-100 d-flex flex-column justify-content-center">
+                    <small class="text-white-50 fw-bold text-uppercase">Approved Contribution Balance</small>
+                    <h2 class="fw-bold m-0 mt-1">UGX {{ "{:,.2f}".format(balance|default(0)) }}</h2>
+                </div>
             </div>
         </div>
 
-        <!-- Submit New Contribution Deposit Request -->
-        <div class="card">
-            <h4>💰 Request Deposit Contribution</h4>
-            <form method="POST" style="margin-top: 15px;">
-                <div class="grid-2" style="margin-bottom: 0;">
-                    <div>
-                        <label for="amount" style="font-size: 12px; font-weight: bold;">Contribution Amount (UGX)</label>
-                        <input type="number" id="amount" name="amount" placeholder="e.g. 50000" required>
-                    </div>
-                    <div>
-                        <label for="frequency" style="font-size: 12px; font-weight: bold;">Frequency</label>
-                        <select id="frequency" name="frequency">
-                            <option value="Weekly">Weekly</option>
-                            <option value="Monthly">Monthly</option>
-                        </select>
-                    </div>
+        <!-- Deposit Request Card -->
+        <div class="stat-card mb-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-sack-dollar text-warning me-2"></i>Request Deposit Contribution</h5>
+            <form action="{{ url_for('deposit_request') }}" method="POST" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small text-muted">Contribution Amount (UGX)</label>
+                    <input type="number" step="0.01" name="amount" class="form-control" placeholder="e.g. 50000" required>
                 </div>
-                <div>
-                    <label for="date" style="font-size: 12px; font-weight: bold;">Deposit Date</label>
-                    <input type="date" id="date" name="date" required>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small text-muted">Frequency</label>
+                    <select name="frequency" class="form-select">
+                        <option value="Weekly">Weekly</option>
+                        <option value="Monthly">Monthly</option>
+                    </select>
                 </div>
-                <button type="submit" class="btn-submit">Submit Deposit Request</button>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small text-muted">Deposit Date</label>
+                    <input type="date" name="deposit_date" class="form-control" required>
+                </div>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2">Submit Deposit Request</button>
+                </div>
             </form>
         </div>
 
-        <!-- Staff Rotation Cash Payout Receipts -->
-        <div class="card">
-            <h4>💸 My Rotation Payout Cash Receipts</h4>
-            {% if my_payouts is defined and my_payouts %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Receipt ID</th>
-                        <th>Payout Date</th>
-                        <th>Amount (UGX)</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in my_payouts %}
-                    <tr>
-                        <td><strong>{{ p.id }}</strong></td>
-                        <td>{{ p.date }}</td>
-                        <td><strong>UGX {{ "{:,.2f}".format(p.amount) }}</strong></td>
-                        <td><span class="badge badge-paid">PAID OUT</span></td>
-                        <td>
-                            <button class="btn-receipt" onclick="viewReceipt('{{ p.id }}', '{{ p.recipient }}', '{{ '{:,.2f}'.format(p.amount) }}', '{{ p.date }}', '{{ p.cycle }}')">📄 View Receipt</button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p style="font-size: 13px; color: #888; font-style: italic; margin-top: 10px;">No payout cash receipts received yet.</p>
-            {% endif %}
-        </div>
-
-        <!-- Deposit Request History -->
-        <div class="card">
-            <h4>📊 My Deposit Request History</h4>
-            {% if transactions is defined and transactions %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Frequency</th>
-                        <th>Amount (UGX)</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for tx in transactions %}
-                    <tr>
-                        <td>#{{ tx.id }}</td>
-                        <td>{{ tx.date }}</td>
-                        <td>{{ tx.frequency }}</td>
-                        <td>UGX {{ "{:,.2f}".format(tx.amount) }}</td>
-                        <td>
-                            {% if tx.status|lower == 'approved' %}
-                                <span class="badge badge-success">Approved</span>
-                            {% else %}
-                                <span class="badge badge-warning">Pending Approval</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p style="font-size: 13px; color: #888; font-style: italic; margin-top: 10px;">No deposit requests submitted yet.</p>
-            {% endif %}
-        </div>
     </div>
 
-    <script>
-        function toggleModal() {
-            var modal = document.getElementById('receiptModal');
-            modal.style.display = (modal.style.display === "flex") ? "none" : "flex";
-        }
-
-        function viewReceipt(id, recipient, amount, date, cycle) {
-            document.getElementById('r_id').innerText = id;
-            document.getElementById('r_name').innerText = recipient;
-            document.getElementById('r_amount').innerText = "UGX " + amount;
-            document.getElementById('r_date').innerText = date;
-            document.getElementById('r_cycle').innerText = cycle;
-            toggleModal();
-        }
-    </script>
 </body>
 </html>
