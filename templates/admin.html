@@ -248,6 +248,7 @@
                                     <th class="py-3 px-3">Phone</th>
                                     <th class="py-3 px-3">NIN</th>
                                     <th class="py-3 px-3">Status</th>
+                                    <th class="py-3 px-3 text-center">Payout</th>
                                     <th class="py-3 px-3 text-right">Staff Password Reset</th>
                                 </tr>
                             </thead>
@@ -259,6 +260,12 @@
                                     <td class="py-3.5 px-3">{{ m.phone or 'N/A' }}</td>
                                     <td class="py-3.5 px-3">{{ m.nin or 'N/A' }}</td>
                                     <td class="py-3.5 px-3"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-medium">{{ m.status or 'Approved' }}</span></td>
+                                    <td class="py-3.5 px-3 text-center">
+                                        <a href="{{ url_for('member_payout', username=m.username) }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-xs font-medium inline-flex items-center space-x-1">
+                                            <i class="fa-solid fa-money-bill-wave"></i>
+                                            <span>Payout</span>
+                                        </a>
+                                    </td>
                                     <td class="py-3.5 px-3 text-right">
                                         <form action="{{ url_for('reset_password', username=m.username) }}" method="POST" class="inline-flex gap-2 justify-end">
                                             <input type="text" name="new_password" placeholder="New pass" required class="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs w-28">
