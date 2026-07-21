@@ -340,10 +340,9 @@ def staff_dashboard():
         return redirect(url_for('login'))
 
 
-@app.route('/deposit', methods=['GET', 'POST'])
-@app.route('/make_payment', methods=['GET', 'POST'])
+@app.route('/deposit_request', methods=['POST'])
 @login_required
-def make_payment():
+def deposit_request():
     return staff_dashboard()
 
 
