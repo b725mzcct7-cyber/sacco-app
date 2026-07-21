@@ -140,4 +140,125 @@
             {% for category, message in messages %}
               <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                 {{ message }}
-                <button type="button" class="btnNormally I can help with things like this, but I don't seem to have access to that content. You can try again or ask me for something else.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Quick Stats Overview -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <small class="text-muted fw-bold">APPROVED DEPOSITS</small>
+                    <h3 class="fw-bold mt-2 text-success">UGX {{ "{:,.2f}".format(approved) }}</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <small class="text-muted fw-bold">PENDING DEPOSITS</small>
+                    <h3 class="fw-bold mt-2 text-warning">UGX {{ "{:,.2f}".format(pending) }}</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <small class="text-muted fw-bold">TOTAL PAID OUT</small>
+                    <h3 class="fw-bold mt-2 text-danger">UGX {{ "{:,.2f}".format(total_paid_out) }}</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <small class="text-muted fw-bold">RESERVE VAULT</small>
+                    <h3 class="fw-bold mt-2 text-primary">UGX {{ "{:,.2f}".format(reserve_vault) }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Approvals Section -->
+        <div class="card-custom mb-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-user-clock text-warning me-2"></i> Pending User Registrations</h5>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Username</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in pending_users %}
+                        <tr>
+                            <td class="fw-semibold">{{ user.full_name }}</td>
+                            <td>{{ user.username }}</td>
+                            <td><span class="badge bg-warning text-dark">Pending</span></td>
+                            <td>
+                                <a href="{{ url_for('approve_user', username=user.username) }}" class="btn btn-sm btn-success"><i class="fa-solid fa-check"></i> Approve</a>
+                                <a href="{{ url_for('delete_user', username=user.username) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this user?');"><i class="fa-solid fa-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">No pending registration requests.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- All Transactions Queue -->
+        <div class="card-custom">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-list-check text-primary me-2"></i> Transaction History</h5>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                        ID
+                        <tr>
+                            <th>#</th>
+                            <th>Username</th>
+                            <th>Amount (UGX)</th>
+                            <th>Frequency</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        <tr>
+                            <td>{{ tx.id }}</td>
+                            <td class="fw-semibold">{{ tx.username }}</td>
+                            <td>{{ "{:,.2f}".format(tx.amount) }}</td>
+                            <td>{{ tx.frequency }}</td>
+                            <td>{{ tx.date }}</td>
+                            <td>
+                                {% if tx.status == 'approved' %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if tx.status != 'approved' %}
+                                    <a href="{{ url_for('approve_tx', tx_id=tx.id) }}" class="btn btn-sm btn-success">Confirm</a>
+                                {% endif %}
+                                <a href="{{ url_for('delete_tx', tx_id=tx.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete transaction?');"><i class="fa-solid fa-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-3">No transactions found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
