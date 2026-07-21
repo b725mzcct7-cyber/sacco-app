@@ -13,8 +13,18 @@
         .card { background: white; padding: 22px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
-        .form-group input, .form-group select { width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 5px; }
-        .btn-update { background: #1e3c72; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #ffffff !important;
+            color: #111111 !important;
+            font-size: 14px;
+        }
+
+        .btn-update { background: #1e3c72; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
         th { background: #fafafa; color: #666; }
@@ -37,19 +47,19 @@
                 <form method="POST" style="margin-top: 15px;">
                     <div class="form-group">
                         <label>Full Name</label>
-                        <input type="text" name="full_name" value="{{ member.full_name }}" required>
+                        <input type="text" name="full_name" value="{{ member.full_name if member.full_name is defined else '' }}" required>
                     </div>
                     <div class="form-group">
                         <label>Phone Number</label>
-                        <input type="text" name="phone" value="{{ member.phone }}" required>
+                        <input type="text" name="phone" value="{{ member.phone if member.phone is defined else '' }}" required>
                     </div>
                     <div class="form-group">
                         <label>National ID No. (NIN)</label>
-                        <input type="text" name="national_id" value="{{ member.national_id }}" required>
+                        <input type="text" name="national_id" value="{{ member.national_id if member.national_id is defined else '' }}" required>
                     </div>
                     <div class="form-group">
                         <label>Date of Birth</label>
-                        <input type="date" name="dob" value="{{ member.dob }}" required>
+                        <input type="date" name="dob" value="{{ member.dob if member.dob is defined else '' }}" required>
                     </div>
                     <div class="form-group">
                         <label>Account Status</label>
@@ -61,7 +71,7 @@
                     </div>
                     <div class="form-group" style="background: #fdf2e9; padding: 10px; border-radius: 5px; border-left: 3px solid #e67e22;">
                         <label style="color: #d35400;">🔑 Reset Password</label>
-                        <input type="password" name="password" placeholder="Enter new password">
+                        <input type="password" name="password" placeholder="Enter new password (optional)">
                     </div>
                     <button type="submit" class="btn-update">Save Changes</button>
                 </form>
@@ -71,19 +81,19 @@
             <div>
                 <div class="card" style="background: #27ae60; color: white; margin-bottom: 20px;">
                     <h4>Total Contributions Paid</h4>
-                    <h2 style="margin-top: 10px;">UGX {{ "{:,.2f}".format(total_paid) }}</h2>
+                    <h2 style="margin-top: 10px;">UGX {{ "{:,.2f}".format(total_paid if total_paid is defined else 0) }}</h2>
                 </div>
                 <div class="card">
                     <h4>Member Profile Summary</h4>
-                    <p style="margin-top: 10px;"><strong>Username:</strong> {{ member.username }}</p>
-                    <p style="margin-top: 6px;"><strong>Role:</strong> {{ member.role.capitalize() }}</p>
+                    <p style="margin-top: 10px;"><strong>Username:</strong> {{ member.username if member.username is defined else '' }}</p>
+                    <p style="margin-top: 6px;"><strong>Role:</strong> {{ (member.role if member.role is defined else 'member').capitalize() }}</p>
                 </div>
             </div>
         </div>
 
         <!-- Individual Payment Ledger -->
         <div class="card">
-            <h4>Payment History Ledger for {{ member.full_name }}</h4>
+            <h4>Payment History Ledger for {{ member.full_name if member.full_name is defined else '' }}</h4>
             <table>
                 <thead>
                     <tr>
@@ -95,21 +105,28 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for tx in transactions %}
-                    <tr>
-                        <td>#{{ tx.id }}</td>
-                        <td>{{ tx.frequency }}</td>
-                        <td>{{ tx.date }}</td>
-                        <td>UGX {{ "{:,.2f}".format(tx.amount) }}</td>
-                        <td>
-                            {% if tx.status == 'approved' %}
-                                <span class="badge badge-success">Approved</span>
-                            {% else %}
-                                <span class="badge badge-warning">Pending</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
+                    {% if transactions is defined and transactions %}
+                        {% for tx in transactions %}
+                        <tr>
+                            <td>#{{ tx['id'] if tx['id'] is defined else tx.id }}</td>
+                            <td>{{ tx['frequency'] if tx['frequency'] is defined else tx.frequency }}</td>
+                            <td>{{ tx['date'] if tx['date'] is defined else tx.date }}</td>
+                            <td>UGX {{ "{:,.2f}".format(tx['amount'] if tx['amount'] is defined else tx.amount) }}</td>
+                            <td>
+                                {% set tx_status = (tx['status'] if tx['status'] is defined else tx.status)|string|lower|trim %}
+                                {% if tx_status == 'approved' %}
+                                    <span class="badge badge-success">Approved</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #888;">No transactions found for this member.</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
