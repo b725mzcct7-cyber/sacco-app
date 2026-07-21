@@ -382,6 +382,65 @@ def approve_tx(tx_id):
     flash('Transaction approved.', 'success')
     return redirect(url_for('admin_dashboard'))
 
+@app.route('/admin/reject_user/<username>', methods=['POST', 'GET'])
+@admin_required
+def reject_user(username):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM users WHERE username = %s AND role != 'admin'", (username,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash(f'User {username} registration rejected and removed.', 'warning')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/reject_tx/<int:tx_id>', methods=['POST', 'GET'])
+@admin_required
+def reject_tx(tx_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE transactions SET status = 'rejected' WHERE id = %s", (tx_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash('Transaction rejected.', 'warning')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/issue_loan', methods=['POST'])
+@admin_required
+def issue_loan():
+    username = request.form.get('username')
+    amount = request.form.get('amount')
+    date_str = request.form.get('date')
+    if username and amount and float(amount) > 0:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO loans (username, amount, balance, status, date) VALUES (%s, %s, %s, 'active', %s)",
+                    (username, float(amount), float(amount), date_str))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash(f'Loan of UGX {float(amount):,.2f} issued to {username} successfully.', 'success')
+    return redirect(url_for('admin_loans'))
+
+@app.route('/admin/issue_payout', methods=['POST'])
+@admin_required
+def issue_payout():
+    username = request.form.get('username')
+    amount = request.form.get('amount')
+    date_str = request.form.get('date')
+    notes = request.form.get('notes', 'Standard Payout')
+    if username and amount and float(amount) > 0:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO payouts (username, amount, date, notes) VALUES (%s, %s, %s, %s)",
+                    (username, float(amount), date_str, notes))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash(f'Payout of UGX {float(amount):,.2f} recorded for {username}.', 'success')
+    return redirect(url_for('admin_transactions'))
+
 @app.route('/admin/clear_loan/<int:loan_id>')
 @admin_required
 def clear_loan(loan_id):
