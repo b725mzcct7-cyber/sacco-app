@@ -627,7 +627,7 @@ def approve_tx(tx_id):
     return redirect(url_for('admin_dashboard'))
 
 
-## --- DELETE TRANSACTION RECORD ---
+# --- DELETE TRANSACTION RECORD ---
 @app.route('/admin/delete_tx/<int:tx_id>')
 @admin_required
 def delete_tx(tx_id):
