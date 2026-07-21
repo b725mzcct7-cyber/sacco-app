@@ -74,6 +74,9 @@
                     <div class="flex items-center space-x-2">
                         <label for="rotationSelect" class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Rotation:</label>
                         <select id="rotationSelect" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 px-3 py-1.5 font-medium">
+                            <option value="1">Cycle 01 - Q1</option>
+                            <option value="2">Cycle 02 - Q2</option>
+                            <option value="3">Cycle 03 - Q3</option>
                             <option value="4" selected>Cycle 04 - Q4</option>
                         </select>
                     </div>
@@ -113,72 +116,35 @@
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h2 class="text-2xl font-bold text-slate-800 tracking-tight">SACCO Administration Dashboard</h2>
-                        <p class="text-sm text-slate-500">Overview, pending approvals, and scheduled weekly/monthly member payouts.</p>
+                        <p class="text-sm text-slate-500">Manage member accounts, execute loan distributions, review payouts, and handle staff access.</p>
                     </div>
                 </div>
 
                 <!-- Quick Metric Cards Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Approved Deposits</p>
-                        <h3 class="text-2xl font-bold text-slate-800 mt-1">UGX {{ "{:,.2f}".format(approved) }}</h3>
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Approved Deposits</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1">UGX {{ "{:,.2f}".format(approved) }}</h3>
+                        </div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Pending Deposits</p>
-                        <h3 class="text-2xl font-bold text-slate-800 mt-1">UGX {{ "{:,.2f}".format(pending) }}</h3>
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Pending Deposits</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1">UGX {{ "{:,.2f}".format(pending) }}</h3>
+                        </div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Paid Out</p>
-                        <h3 class="text-2xl font-bold text-slate-800 mt-1">UGX {{ "{:,.2f}".format(total_paid_out) }}</h3>
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Paid Out</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1">UGX {{ "{:,.2f}".format(total_paid_out) }}</h3>
+                        </div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Reserve Vault</p>
-                        <h3 class="text-2xl font-bold text-slate-800 mt-1">UGX {{ "{:,.2f}".format(reserve_vault) }}</h3>
-                    </div>
-                </div>
-
-                <!-- Scheduled Payout Queue Section (New Addition for Weekly/Monthly Payouts) -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-slate-800 flex items-center space-x-2">
-                            <i class="fa-solid fa-calendar-check text-indigo-600"></i>
-                            <span>Scheduled Payout Queue (Weekly / Monthly Selection)</span>
-                        </h3>
-                        <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded font-medium">Ready for Disbursal</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-200 text-xs uppercase font-semibold text-slate-400">
-                                    <th class="py-3 px-3">Member Name</th>
-                                    <th class="py-3 px-3">Username</th>
-                                    <th class="py-3 px-3">Cycle Term</th>
-                                    <th class="py-3 px-3 text-right">Execute Payout & Generate Receipt</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-sm divide-y divide-slate-100 text-slate-700">
-                                {% if queued_payouts %}
-                                    {% for q in queued_payouts %}
-                                    <tr>
-                                        <td class="py-3.5 px-3 font-medium">{{ q.full_name }}</td>
-                                        <td class="py-3.5 px-3 text-slate-500">{{ q.username }}</td>
-                                        <td class="py-3.5 px-3"><span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">Scheduled Cycle</span></td>
-                                        <td class="py-3.5 px-3 text-right">
-                                            <form action="{{ url_for('execute_payout', username=q.username) }}" method="POST" class="inline">
-                                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow transition">
-                                                    <i class="fa-solid fa-money-bill-transfer mr-1"></i> Pay Out & Print Receipt
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                {% else %}
-                                    <tr>
-                                        <td colspan="4" class="text-center py-6 text-slate-400 text-xs">No members currently scheduled. Go to the <strong>Member Details</strong> tab and click "Add to Payout Queue" for members due this week or month.</td>
-                                    </tr>
-                                {% endif %}
-                            </tbody>
-                        </table>
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Reserve Vault</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1">UGX {{ "{:,.2f}".format(reserve_vault) }}</h3>
+                        </div>
                     </div>
                 </div>
 
@@ -199,17 +165,19 @@
                                     </tr>
                                 </thead>
                                 <tbody class="text-sm divide-y divide-slate-100 text-slate-700">
-                                    {% for u in pending_users %}
-                                    <tr>
-                                        <td class="py-3 px-2 font-medium">{{ u.full_name }}</td>
-                                        <td class="py-3 px-2 text-slate-500">{{ u.username }}</td>
-                                        <td class="py-3 px-2 text-right">
-                                            <a href="{{ url_for('approve_user', username=u.username) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-medium">Approve</a>
-                                        </td>
-                                    </tr>
+                                    {% if pending_users %}
+                                        {% for u in pending_users %}
+                                        <tr>
+                                            <td class="py-3 px-2 font-medium">{{ u.full_name }}</td>
+                                            <td class="py-3 px-2 text-slate-500">{{ u.username }}</td>
+                                            <td class="py-3 px-2 text-right">
+                                                <a href="{{ url_for('approve_user', username=u.username) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-medium">Approve</a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
                                     {% else %}
-                                    <tr><td colspan="3" class="text-center py-4 text-slate-400 text-xs">No pending registrations.</td></tr>
-                                    {% endfor %}
+                                        <tr><td colspan="3" class="text-center py-4 text-slate-400 text-xs">No pending registrations.</td></tr>
+                                    {% endif %}
                                 </tbody>
                             </table>
                         </div>
@@ -230,25 +198,39 @@
                                     </tr>
                                 </thead>
                                 <tbody class="text-sm divide-y divide-slate-100 text-slate-700">
-                                    {% for tx in pending_txs %}
-                                    <tr>
-                                        <td class="py-3 px-2 font-medium">{{ tx.username }}</td>
-                                        <td class="py-3 px-2 font-mono text-slate-600">UGX {{ "{:,.2f}".format(tx.amount) }}</td>
-                                        <td class="py-3 px-2 text-right">
-                                            <a href="{{ url_for('approve_tx', tx_id=tx.id) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-medium">Approve Payment</a>
-                                        </td>
-                                    </tr>
+                                    {% if pending_txs %}
+                                        {% for tx in pending_txs %}
+                                        <tr>
+                                            <td class="py-3 px-2 font-medium">{{ tx.username }}</td>
+                                            <td class="py-3 px-2 font-mono text-slate-600">UGX {{ "{:,.2f}".format(tx.amount) }}</td>
+                                            <td class="py-3 px-2 text-right">
+                                                <a href="{{ url_for('approve_tx', tx_id=tx.id) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-medium">Approve Payment</a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
                                     {% else %}
-                                    <tr><td colspan="3" class="text-center py-4 text-slate-400 text-xs">No pending payment requests.</td></tr>
-                                    {% endfor %}
+                                        <tr><td colspan="3" class="text-center py-4 text-slate-400 text-xs">No pending payment requests.</td></tr>
+                                    {% endif %}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
+                <!-- Admin Security Settings -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center space-x-2">
+                        <i class="fa-solid fa-lock text-slate-700"></i>
+                        <span>Admin Security</span>
+                    </h3>
+                    <form action="{{ url_for('admin_change_password') }}" method="POST" class="flex gap-4">
+                        <input type="password" name="new_password" placeholder="New Admin Password" required class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 w-72 focus:ring-indigo-500 focus:border-indigo-500">
+                        <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Update Password</button>
+                    </form>
+                </div>
+
                 {% elif active_tab == 'members' %}
-                <!-- MEMBERS TAB (Updated with Payout Queue Action Button) -->
+                <!-- MEMBERS TAB -->
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold text-slate-800">SACCO Members Directory</h2>
                     <form action="{{ url_for('admin_members') }}" method="GET" class="flex gap-2">
@@ -264,8 +246,9 @@
                                     <th class="py-3 px-3">Full Name</th>
                                     <th class="py-3 px-3">Username</th>
                                     <th class="py-3 px-3">Phone</th>
+                                    <th class="py-3 px-3">NIN</th>
                                     <th class="py-3 px-3">Status</th>
-                                    <th class="py-3 px-3 text-right">Weekly/Monthly Payout Action</th>
+                                    <th class="py-3 px-3 text-right">Staff Password Reset</th>
                                 </tr>
                             </thead>
                             <tbody class="text-sm divide-y divide-slate-100 text-slate-700">
@@ -274,12 +257,12 @@
                                     <td class="py-3.5 px-3 font-medium">{{ m.full_name }}</td>
                                     <td class="py-3.5 px-3 text-slate-500">{{ m.username }}</td>
                                     <td class="py-3.5 px-3">{{ m.phone or 'N/A' }}</td>
-                                    <td class="py-3.5 px-3"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-medium">Active</span></td>
+                                    <td class="py-3.5 px-3">{{ m.nin or 'N/A' }}</td>
+                                    <td class="py-3.5 px-3"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-medium">{{ m.status or 'Approved' }}</span></td>
                                     <td class="py-3.5 px-3 text-right">
-                                        <form action="{{ url_for('queue_payout', username=m.username) }}" method="POST" class="inline">
-                                            <button type="submit" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg text-xs font-medium transition">
-                                                <i class="fa-solid fa-calendar-plus mr-1"></i> Add to Payout Queue
-                                            </button>
+                                        <form action="{{ url_for('reset_password', username=m.username) }}" method="POST" class="inline-flex gap-2 justify-end">
+                                            <input type="text" name="new_password" placeholder="New pass" required class="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs w-28">
+                                            <button type="submit" class="bg-slate-800 text-white px-2.5 py-1 rounded text-xs">Reset</button>
                                         </form>
                                     </td>
                                 </tr>
@@ -351,25 +334,36 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <h3 class="font-bold text-slate-800 mb-4 flex items-center space-x-2">
+                            <i class="fa-solid fa-arrow-up text-red-600"></i>
+                            <span>Payout Receipts</span>
+                        </h3>
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-xs uppercase font-semibold text-slate-400">
+                                    <th class="py-2 px-3">ID</th><th class="py-2 px-3">User</th><th class="py-2 px-3">Amount</th><th class="py-2 px-3">Date</th><th class="py-2 px-3">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
+                                {% for p in payout_history %}
+                                <tr><td class="py-3 px-3">#{{ p.id }}</td><td class="py-3 px-3">{{ p.username }}</td><td class="py-3 px-3 font-mono">UGX {{ "{:,.2f}".format(p.amount) }}</td><td class="py-3 px-3">{{ p.date }}</td><td class="py-3 px-3">{{ p.notes }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 {% elif active_tab == 'reports' %}
                 <!-- REPORTS TAB -->
-                <h2 class="text-2xl font-bold text-slate-800 mb-6">SACCO Reports & Printable Receipts</h2>
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">SACCO Reports & Summaries</h2>
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-slate-800">Completed Payout History & Printable Receipts</h3>
-                        <button onclick="window.print();" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-medium"><i class="fa-solid fa-print mr-1"></i> Print Report / Receipts</button>
-                    </div>
+                    <h3 class="font-bold text-slate-800 mb-4">Complete Payout & Transaction Summary</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-sm">
                             <thead>
                                 <tr class="border-b border-slate-200 text-xs uppercase font-semibold text-slate-400">
-                                    <th class="py-3 px-3">Payout ID</th>
-                                    <th class="py-3 px-3">Recipient</th>
-                                    <th class="py-3 px-3">Disbursed Amount</th>
-                                    <th class="py-3 px-3">Date</th>
-                                    <th class="py-3 px-3 text-right">Receipt Action</th>
+                                    <th class="py-3 px-3">Payout ID</th><th class="py-3 px-3">Recipient</th><th class="py-3 px-3">Disbursed Amount</th><th class="py-3 px-3">Date</th><th class="py-3 px-3">Notes</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -379,9 +373,7 @@
                                     <td class="py-3 px-3">{{ p.username }}</td>
                                     <td class="py-3 px-3 font-mono">UGX {{ "{:,.2f}".format(p.amount) }}</td>
                                     <td class="py-3 px-3">{{ p.date }}</td>
-                                    <td class="py-3 px-3 text-right">
-                                        <a href="{{ url_for('print_receipt', payout_id=p.id) }}" target="_blank" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded text-xs font-medium">View Printable Receipt</a>
-                                    </td>
+                                    <td class="py-3 px-3 text-slate-500">{{ p.notes }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -391,15 +383,14 @@
 
                 {% elif active_tab == 'savings' %}
                 <!-- SAVINGS / STAFF PASSWORD TOOLS TAB -->
-                <h2 class="text-2xl font-bold text-slate-800 mb-6">Staff Ledger & Password Management</h2>
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">Staff Ledger & Retention Pool</h2>
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <p class="text-sm text-slate-500 mb-4">Excess funds remaining after loan deductions are retained securely here for each member until distributed at the end of the rotation cycle.</p>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-sm">
                             <thead>
                                 <tr class="border-b border-slate-200 text-xs uppercase font-semibold text-slate-400">
-                                    <th class="py-3 px-3">Staff Profile Name</th>
-                                    <th class="py-3 px-3">Username</th>
-                                    <th class="py-3 px-3 text-right">Password Reset Tool</th>
+                                    <th class="py-3 px-3">Member</th><th class="py-3 px-3">Username</th><th class="py-3 px-3">Retention Pool Status</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -407,12 +398,7 @@
                                 <tr>
                                     <td class="py-3.5 px-3 font-medium">{{ s.full_name }}</td>
                                     <td class="py-3.5 px-3 text-slate-500">{{ s.username }}</td>
-                                    <td class="py-3.5 px-3 text-right">
-                                        <form action="{{ url_for('reset_password', username=s.username) }}" method="POST" class="inline-flex gap-2 justify-end">
-                                            <input type="text" name="new_password" placeholder="New password" required class="bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs w-36">
-                                            <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1 rounded text-xs font-medium">Update</button>
-                                        </form>
-                                    </td>
+                                    <td class="py-3.5 px-3"><span class="bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full text-xs font-medium">Managed in Rotation Pool</span></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
