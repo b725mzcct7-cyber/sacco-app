@@ -304,7 +304,7 @@ def staff_dashboard():
                 (username,)
             )
             res = cur.fetchone()
-            balance = float(res['total']) if res and res['total'] is not None else 0.0
+            balance = float(res['total']) if res and res.get('total') is not None else 0.0
         except Exception:
             conn.rollback()
             balance = 0.0
@@ -312,7 +312,7 @@ def staff_dashboard():
         try:
             cur.execute(
                 """
-                SELECT id, date, amount, username AS recipient, notes AS cycle 
+                SELECT id, date, amount, username, notes 
                 FROM payouts 
                 WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) 
                 ORDER BY id DESC
@@ -380,7 +380,7 @@ def admin_dashboard():
         try:
             cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(status)) = 'approved'")
             res = cur.fetchone()
-            approved = float(res['total']) if res and res['total'] is not None else 0.0
+            approved = float(res['total']) if res and res.get('total') is not None else 0.0
         except Exception:
             conn.rollback()
             approved = 0.0
@@ -388,7 +388,7 @@ def admin_dashboard():
         try:
             cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(status)) = 'pending'")
             res = cur.fetchone()
-            pending = float(res['total']) if res and res['total'] is not None else 0.0
+            pending = float(res['total']) if res and res.get('total') is not None else 0.0
         except Exception:
             conn.rollback()
             pending = 0.0
@@ -403,7 +403,7 @@ def admin_dashboard():
         try:
             cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM payouts")
             res = cur.fetchone()
-            total_paid_out = float(res['total']) if res and res['total'] is not None else 0.0
+            total_paid_out = float(res['total']) if res and res.get('total') is not None else 0.0
         except Exception:
             conn.rollback()
             total_paid_out = 0.0
@@ -579,7 +579,7 @@ def view_member_ledger(username):
             (target_username,)
         )
         res = cur.fetchone()
-        approved_total = float(res['total']) if res and res['total'] is not None else 0.0
+        approved_total = float(res['total']) if res and res.get('total') is not None else 0.0
     except Exception:
         conn.rollback()
         approved_total = 0.0
@@ -590,7 +590,7 @@ def view_member_ledger(username):
             (target_username,)
         )
         res = cur.fetchone()
-        pending_total = float(res['total']) if res and res['total'] is not None else 0.0
+        pending_total = float(res['total']) if res and res.get('total') is not None else 0.0
     except Exception:
         conn.rollback()
         pending_total = 0.0
