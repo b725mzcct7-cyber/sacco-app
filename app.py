@@ -2,12 +2,13 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
+from functools import wraps
 
 # ---------------------------------------------------------
 # 1. INITIALIZE FLASK APP
 # ---------------------------------------------------------
 app = Flask(__name__)
-app.secret_key = 'sacco_secret_key_here'
+app.secret_key = os.environ.get('SECRET_KEY', 'canan_bbosa_ventures_sacco_secret')
 
 # Retrieve PostgreSQL URL from Render environment variables
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -77,7 +78,7 @@ def init_db():
             VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (username) 
             DO UPDATE SET password = EXCLUDED.password, role = EXCLUDED.role, status = EXCLUDED.status;
-        ''', ('Administrator', 'admin', 'admin123', 'admin', 'approved'))
+        ''', ('Canan Bbosa Admin', 'admin', 'admin123', 'admin', 'approved'))
         
         conn.commit()
         cur.close()
@@ -90,7 +91,29 @@ init_db()
 
 
 # ---------------------------------------------------------
-# 3. APPLICATION ROUTES
+# 3. AUTH & DECORATOR HELPERS
+# ---------------------------------------------------------
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session or str(session['user'].get('role', '')).lower().strip() != 'admin':
+            flash("Admin privilege required.", "danger")
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# ---------------------------------------------------------
+# 4. APPLICATION ROUTES
 # ---------------------------------------------------------
 
 @app.route('/')
@@ -106,7 +129,6 @@ def home():
 # --- LOGIN ROUTE ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # If already logged in, redirect to respective dashboard immediately
     if request.method == 'GET' and 'user' in session:
         role = str(session['user'].get('role', '')).lower().strip()
         if role == 'admin':
@@ -137,13 +159,12 @@ def login():
                 
                 if role != 'admin' and status not in ['approved', 'none', 'null', '']:
                     session.clear()
-                    flash('Your account is pending admin approval.', 'warning')
+                    flash('Your account is pending approval by Canan Bbosa Ventures admin.', 'warning')
                     return redirect(url_for('login'))
 
-                # CLEAR EXISTING SESSION TO PREVENT CROSS-ROLE BLEEDING
+                # Clear session to prevent cross-role contamination
                 session.clear()
                 
-                # STORE CLEAN SESSION
                 session['user'] = {
                     'id': user_dict.get('id'),
                     'full_name': user_dict.get('full_name'),
@@ -167,7 +188,7 @@ def login():
     return render_template('login.html')
 
 
-# --- REGISTER ROUTE ---
+# --- REGISTER / SIGNUP ROUTE ---
 @app.route('/register', methods=['GET', 'POST'])
 @app.route('/signup', methods=['GET', 'POST'])
 def register():
@@ -191,7 +212,7 @@ def register():
             if existing_user:
                 cur.close()
                 conn.close()
-                flash('Username already exists. Please choose another.', 'warning')
+                flash('Username already exists. Please select another.', 'warning')
                 return redirect(url_for('register'))
                 
             cur.execute(
@@ -202,7 +223,7 @@ def register():
             cur.close()
             conn.close()
             
-            flash('Registration successful! Pending admin approval.', 'success')
+            flash('Registration successful! Account is pending admin approval.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
             if conn: conn.rollback(); conn.close()
@@ -214,13 +235,10 @@ def register():
 # --- STAFF DASHBOARD ---
 @app.route('/dashboard', methods=['GET', 'POST'])
 @app.route('/staff_dashboard', methods=['GET', 'POST'])
+@login_required
 def staff_dashboard():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-        
     username = session['user'].get('username', '').strip()
     
-    # RE-VERIFY ROLE DIRECTLY FROM DB TO PREVENT CACHED ADMIN ESCALATION
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s))", (username,))
@@ -235,13 +253,12 @@ def staff_dashboard():
     user_dict = dict(db_user)
     role = str(user_dict.get('role', 'staff')).lower().strip()
 
-    # Route protection: Send admin back to admin area
     if role == 'admin':
         cur.close()
         conn.close()
         return redirect(url_for('admin_dashboard'))
 
-    # Deposit Submission
+    # Handle Deposit Submission
     if request.method == 'POST':
         amount = request.form.get('amount')
         frequency = request.form.get('frequency', 'Weekly')
@@ -254,10 +271,10 @@ def staff_dashboard():
                     (username, float(amount), frequency, date_str, 'pending')
                 )
                 conn.commit()
-                flash('Deposit submitted successfully! Awaiting admin approval.', 'success')
+                flash('Deposit request submitted! Awaiting admin confirmation.', 'success')
             except Exception as e:
                 conn.rollback()
-                flash(f'Failed to submit deposit: {e}', 'danger')
+                flash(f'Failed to record deposit: {e}', 'danger')
         else:
             flash('Please enter a valid deposit amount.', 'danger')
         
@@ -265,7 +282,7 @@ def staff_dashboard():
         conn.close()
         return redirect(url_for('staff_dashboard'))
 
-    # Fetch User Transactions
+    # Fetch User Transactions & Balances
     try:
         cur.execute('SELECT * FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) ORDER BY id DESC', (username,))
         user_txs = cur.fetchall()
@@ -273,7 +290,6 @@ def staff_dashboard():
         conn.rollback()
         user_txs = []
 
-    # Calculate User Balance (Approved Total)
     try:
         cur.execute(
             """
@@ -290,7 +306,6 @@ def staff_dashboard():
         conn.rollback()
         balance = 0.0
 
-    # Fetch User Payout Receipts
     try:
         cur.execute(
             """
@@ -318,41 +333,31 @@ def staff_dashboard():
     )
 
 
-# --- MAKE PAYMENT REDIRECT ---
 @app.route('/deposit', methods=['GET', 'POST'])
 @app.route('/make_payment', methods=['GET', 'POST'])
+@login_required
 def make_payment():
     return staff_dashboard()
 
 
 # --- ADMIN DASHBOARD ---
 @app.route('/admin', methods=['GET', 'POST'])
+@admin_required
 def admin_dashboard():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-        
     username = session['user'].get('username', '').strip()
     
-    # RE-VERIFY ROLE DIRECTLY FROM DB TO PREVENT NON-ADMIN ACCESS
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT role FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s))", (username,))
-    db_user = cur.fetchone()
 
-    if not db_user or str(db_user.get('role')).lower().strip() != 'admin':
-        cur.close()
-        conn.close()
-        return redirect(url_for('staff_dashboard'))
-    
     try:
-        cur.execute("SELECT * FROM users WHERE LOWER(TRIM(status)) = 'pending' AND (LOWER(TRIM(role)) != 'admin' OR role IS NULL)")
+        cur.execute("SELECT * FROM users WHERE LOWER(TRIM(status)) = 'pending' AND (LOWER(TRIM(role)) != 'admin' OR role IS NULL) ORDER BY id DESC")
         pending_users = cur.fetchall()
     except Exception:
         conn.rollback()
         pending_users = []
 
     try:
-        cur.execute("SELECT * FROM users WHERE (LOWER(TRIM(status)) = 'approved' OR status IS NULL) AND (LOWER(TRIM(role)) != 'admin' OR role IS NULL)")
+        cur.execute("SELECT * FROM users WHERE (LOWER(TRIM(status)) = 'approved' OR status IS NULL) AND (LOWER(TRIM(role)) != 'admin' OR role IS NULL) ORDER BY id DESC")
         staff_list = cur.fetchall()
     except Exception:
         conn.rollback()
@@ -414,16 +419,59 @@ def admin_dashboard():
     )
 
 
-# --- ADMIN ADD PAYOUT ROUTE ---
+# --- DISBURSE PAYOUTS QUEUE ROUTE (FOR ROTATION QUEUE) ---
+@app.route('/admin/disburse_payouts', methods=['POST'])
+@admin_required
+def disburse_payouts():
+    payout_date = request.form.get('payout_date')
+    notes = request.form.get('notes', 'Rotation Payout Cycle')
+
+    disbursed_count = 0
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        # Process multi-slot form values (e.g., staff_1 to staff_5)
+        for i in range(1, 6):
+            staff_username = request.form.get(f'staff_{i}')
+            amount = request.form.get(f'amount_{i}')
+
+            if staff_username and amount:
+                try:
+                    amount_val = float(amount)
+                    if amount_val > 0:
+                        cur.execute(
+                            "INSERT INTO payouts (username, amount, date, notes) VALUES (%s, %s, %s, %s)",
+                            (staff_username.strip(), amount_val, payout_date, notes)
+                        )
+                        disbursed_count += 1
+                except ValueError:
+                    continue
+
+        conn.commit()
+        if disbursed_count > 0:
+            flash(f"Successfully disbursed rotation payout for {disbursed_count} staff member(s).", "success")
+        else:
+            flash("No valid amounts submitted for disbursement.", "warning")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error processing payouts: {e}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    # STRICT FIX: Always redirect directly back to admin dashboard
+    return redirect(url_for('admin_dashboard'))
+
+
+# --- DIRECT SINGLE PAYOUT ROUTE ---
 @app.route('/admin/add_payout', methods=['POST'])
+@admin_required
 def add_payout():
-    if 'user' not in session or str(session['user'].get('role')).lower().strip() != 'admin':
-        return redirect(url_for('login'))
-        
     username = request.form.get('username', '').strip()
     amount = request.form.get('amount')
     date_str = request.form.get('date')
-    notes = request.form.get('notes', '')
+    notes = request.form.get('notes', 'Direct Payout')
 
     if username and amount and float(amount) > 0:
         try:
@@ -436,7 +484,7 @@ def add_payout():
             conn.commit()
             cur.close()
             conn.close()
-            flash(f'Payout of {amount} recorded for {username}!', 'success')
+            flash(f'Payout of UGX {float(amount):,.2f} recorded for {username}!', 'success')
         except Exception as e:
             flash(f'Error adding payout: {e}', 'danger')
     else:
@@ -445,18 +493,16 @@ def add_payout():
     return redirect(url_for('admin_dashboard'))
 
 
-# --- MEMBER LEDGER ROUTE ---
+# --- MEMBER LEDGER VIEW ---
 @app.route('/admin/member/<username>', methods=['GET', 'POST'])
 @app.route('/ledger/<username>', methods=['GET', 'POST'])
+@admin_required
 def view_member_ledger(username):
-    if 'user' not in session or str(session['user'].get('role')).lower().strip() != 'admin':
-        return redirect(url_for('login'))
-
     conn = get_db_connection()
     cur = conn.cursor()
     target_username = str(username).strip()
 
-    # Password Reset Handler
+    # Password Reset Action
     if request.method == 'POST':
         new_password = request.form.get('new_password', '').strip()
         if new_password:
@@ -473,7 +519,7 @@ def view_member_ledger(username):
         else:
             flash('Password cannot be empty.', 'danger')
 
-    # Fetch Profile
+    # Profile Data
     try:
         cur.execute("SELECT * FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s))", (target_username,))
         member_row = cur.fetchone()
@@ -482,7 +528,7 @@ def view_member_ledger(username):
         conn.rollback()
         member_data = {'username': target_username, 'full_name': target_username}
 
-    # Fetch Transactions
+    # Member Transactions
     try:
         cur.execute("SELECT * FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) ORDER BY id DESC", (target_username,))
         transactions = cur.fetchall()
@@ -490,7 +536,7 @@ def view_member_ledger(username):
         conn.rollback()
         transactions = []
 
-    # Member Approved Total
+    # Member Approved Deposits
     try:
         cur.execute(
             "SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'approved'", 
@@ -502,7 +548,7 @@ def view_member_ledger(username):
         conn.rollback()
         approved_total = 0.0
 
-    # Member Pending Total
+    # Member Pending Deposits
     try:
         cur.execute(
             "SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'pending'", 
@@ -526,12 +572,10 @@ def view_member_ledger(username):
     )
 
 
-# --- APPROVE USER ROUTE ---
+# --- APPROVE USER REGISTRATION ---
 @app.route('/admin/approve_user/<username>')
+@admin_required
 def approve_user(username):
-    if 'user' not in session or str(session['user'].get('role')).lower().strip() != 'admin':
-        return redirect(url_for('login'))
-        
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -539,19 +583,35 @@ def approve_user(username):
         conn.commit()
         cur.close()
         conn.close()
-        flash(f'Account for {username} approved!', 'success')
+        flash(f'Account for {username} approved successfully!', 'success')
     except Exception as e:
         flash(f'Approval error: {e}', 'danger')
         
     return redirect(url_for('admin_dashboard'))
 
 
-# --- APPROVE TRANSACTION ROUTE ---
-@app.route('/admin/approve_tx/<int:tx_id>')
-def approve_tx(tx_id):
-    if 'user' not in session or str(session['user'].get('role')).lower().strip() != 'admin':
-        return redirect(url_for('login'))
+# --- DELETE USER / REMOVE STAFF MEMBER ---
+@app.route('/admin/delete_user/<username>')
+@admin_required
+def delete_user(username):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(role)) != 'admin'", (username,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash(f'Staff member "{username}" removed permanently.', 'info')
+    except Exception as e:
+        flash(f'Error deleting staff member: {e}', 'danger')
         
+    return redirect(url_for('admin_dashboard'))
+
+
+# --- APPROVE DEPOSIT TRANSACTION ---
+@app.route('/admin/approve_tx/<int:tx_id>')
+@admin_required
+def approve_tx(tx_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -566,12 +626,10 @@ def approve_tx(tx_id):
     return redirect(url_for('admin_dashboard'))
 
 
-# --- DELETE TRANSACTION ROUTE ---
+# --- DELETE TRANSACTION RECORD ---
 @app.route('/admin/delete_tx/<int:tx_id>')
+@admin_required
 def delete_tx(tx_id):
-    if 'user' not in session or str(session['user'].get('role')).lower().strip() != 'admin':
-        return redirect(url_for('login'))
-        
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -579,7 +637,7 @@ def delete_tx(tx_id):
         conn.commit()
         cur.close()
         conn.close()
-        flash(f'Transaction #{tx_id} deleted permanently!', 'danger')
+        flash(f'Transaction #{tx_id} removed permanently!', 'warning')
     except Exception as e:
         flash(f'Deletion error: {e}', 'danger')
         
@@ -590,7 +648,7 @@ def delete_tx(tx_id):
 @app.route('/logout')
 def logout():
     session.clear()
-    flash('You have been logged out successfully.', 'info')
+    flash('Logged out successfully.', 'info')
     return redirect(url_for('login'))
 
 

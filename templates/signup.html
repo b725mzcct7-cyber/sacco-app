@@ -2,21 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SACCO Registration</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .card { background: #ffffff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 480px; padding: 35px; }
+        body { 
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px; 
+        }
+        .card { 
+            background: #ffffff; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            width: 100%; 
+            max-width: 480px; 
+            padding: 35px; 
+        }
         .card h2 { color: #1e3c72; margin-bottom: 8px; font-size: 24px; text-align: center; }
         .card p.subtitle { color: #666; font-size: 13px; margin-bottom: 20px; text-align: center; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 5px; display: block; }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
-        .btn { width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; margin-top: 10px; }
+        
+        .form-group input { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+            font-size: 14px; 
+            background-color: #ffffff !important; 
+            color: #111111 !important; 
+            transition: border-color 0.2s ease-in-out;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #1e3c72;
+        }
+
+        .btn { 
+            width: 100%; 
+            padding: 12px; 
+            background: #27ae60; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            font-size: 15px; 
+            cursor: pointer; 
+            margin-top: 10px; 
+            transition: background 0.2s ease-in-out;
+        }
         .btn:hover { background: #219150; }
         .footer-link { margin-top: 18px; font-size: 13px; color: #555; text-align: center; display: flex; justify-content: space-around; }
         .footer-link a { color: #1e3c72; text-decoration: none; font-weight: bold; }
+        .footer-link a:hover { text-decoration: underline; }
+        
+        .alert { padding: 10px; font-size: 13px; border-radius: 6px; margin-bottom: 15px; text-align: center; }
+        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     </style>
 </head>
 <body>
@@ -24,33 +72,43 @@
         <h2>Member Registration</h2>
         <p class="subtitle">Complete registration for Admin verification</p>
 
-        <form method="POST">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Registration Form -->
+        <form method="POST" action="/signup" autocomplete="off">
             <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" name="full_name" placeholder="John Doe" required>
+                <label for="full_name">Full Name</label>
+                <input type="text" id="full_name" name="full_name" placeholder="John Doe" required autocomplete="off">
             </div>
             <div class="grid-2">
                 <div class="form-group">
-                    <label>Phone Number</label>
-                    <input type="text" name="phone" placeholder="0770000000" required>
+                    <label for="phone">Phone Number</label>
+                    <input type="text" id="phone" name="phone" placeholder="0770000000" required autocomplete="off">
                 </div>
                 <div class="form-group">
-                    <label>Date of Birth</label>
-                    <input type="date" name="dob" required>
+                    <label for="dob">Date of Birth</label>
+                    <input type="date" id="dob" name="dob" required>
                 </div>
             </div>
             <div class="form-group">
-                <label>National ID No. (NIN)</label>
-                <input type="text" name="national_id" placeholder="CM1234567890AB" required>
+                <label for="national_id">National ID No. (NIN)</label>
+                <input type="text" id="national_id" name="national_id" placeholder="CM1234567890AB" required autocomplete="off">
             </div>
             <div class="grid-2">
                 <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" name="username" placeholder="Choose username" required>
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Choose username" required autocomplete="off">
                 </div>
                 <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" name="password" placeholder="••••••••" required>
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="new-password">
                 </div>
             </div>
             <button type="submit" class="btn">Submit Application</button>
@@ -58,7 +116,7 @@
 
         <div class="footer-link">
             <a href="/login">Back to Login</a>
-            <a href="/forgot_password" style="color: #e67e22;">Forgot Password?</a>
+            <a href="/login" style="color: #e67e22;">Forgot Password?</a>
         </div>
     </div>
 </body>

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SACCO - Admin Dashboard</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -9,12 +10,14 @@
         .navbar { background: #111; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
         .navbar a, .navbar button { color: white; text-decoration: none; background: #333; padding: 7px 14px; border-radius: 4px; font-size: 13px; border: none; cursor: pointer; }
         .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .card { background: white; padding: 22px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 25px; }
+        
         .stat-approved { background: #1e3c72; color: white; }
         .stat-pending { background: #e67e22; color: white; }
         .stat-vault { background: #27ae60; color: white; }
         .stat-paid { background: #8e44ad; color: white; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
         th { background: #fafafa; color: #666; }
@@ -49,10 +52,12 @@
     </style>
 </head>
 <body>
+
+    <!-- Top Navigation Bar -->
     <div class="navbar">
         <h2>SACCO Admin Dashboard</h2>
         <div>
-            <button onclick="toggleModal('passwordModal')">🔑 Change Admin Password</button>
+            <button type="button" onclick="toggleModal('passwordModal')">🔑 Change Admin Password</button>
             <a href="/logout" style="margin-left: 10px;">Logout</a>
         </div>
     </div>
@@ -85,13 +90,13 @@
             <p><strong>Disbursement Date:</strong> <span id="r_date"></span></p>
             <p><strong>Rotation Note:</strong> <span id="r_cycle"></span></p>
             <hr style="margin: 10px 0;">
-            <button onclick="window.print()" class="btn-receipt" style="width: 100%; padding: 8px;">🖨️ Print Staff Receipt</button>
-            <button onclick="toggleModal('receiptModal')" style="width: 100%; background: #ccc; color: #333; margin-top: 8px; padding: 8px; border: none; border-radius: 4px;">Close</button>
+            <button type="button" onclick="window.print()" class="btn-receipt" style="width: 100%; padding: 8px;">🖨️ Print Staff Receipt</button>
+            <button type="button" onclick="toggleModal('receiptModal')" style="width: 100%; background: #ccc; color: #333; margin-top: 8px; padding: 8px; border: none; border-radius: 4px;">Close</button>
         </div>
     </div>
 
     <div class="container">
-        <!-- Overview Grid -->
+        <!-- Dashboard Overview Grid -->
         <div class="stats-grid">
             <div class="card stat-approved">
                 <h4>Total Staff Deposits</h4>
@@ -214,7 +219,7 @@
                         <td><strong>UGX {{ "{:,.2f}".format(p.amount) }}</strong></td>
                         <td><span class="badge badge-paid">PAID OUT</span></td>
                         <td>
-                            <button class="btn-receipt" onclick="viewReceipt('{{ p.id }}', '{{ p.recipient or p.username }}', '{{ "{:,.2f}".format(p.amount) }}', '{{ p.date }}', '{{ p.notes or p.cycle or "Weekly Rotation" }}')">📄 Separate Staff Receipt</button>
+                            <button type="button" class="btn-receipt" onclick="viewReceipt('{{ p.id }}', '{{ p.recipient or p.username }}', '{{ "{:,.2f}".format(p.amount) }}', '{{ p.date }}', '{{ p.notes or p.cycle or "Weekly Rotation" }}')">📄 Separate Staff Receipt</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -313,6 +318,7 @@
         </div>
     </div>
 
+    <!-- Client-Side Scripts -->
     <script>
         function filterStaff() {
             var input = document.getElementById("staffSearch");

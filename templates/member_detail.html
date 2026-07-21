@@ -2,17 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Member Ledger & Edit</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: #f4f6f9; color: #333; }
         .navbar { background: #111; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-        .navbar a { color: white; text-decoration: none; background: #333; padding: 6px 14px; border-radius: 4px; font-size: 13px; }
+        .navbar a { color: white; text-decoration: none; background: #333; padding: 6px 14px; border-radius: 4px; font-size: 13px; font-weight: 600; }
+        .navbar a:hover { background: #444; }
         .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
         .card { background: white; padding: 22px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+        .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #333; }
         
         .form-group input, .form-group select {
             width: 100%;
@@ -22,12 +24,19 @@
             background-color: #ffffff !important;
             color: #111111 !important;
             font-size: 14px;
+            transition: border-color 0.2s ease-in-out;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #1e3c72;
         }
 
-        .btn-update { background: #1e3c72; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
+        .btn-update { background: #1e3c72; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; transition: background 0.2s ease-in-out; }
+        .btn-update:hover { background: #2a5298; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
-        th { background: #fafafa; color: #666; }
+        th { background: #fafafa; color: #666; font-weight: 600; }
         .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
         .badge-success { background: #e8f8f0; color: #27ae60; }
         .badge-warning { background: #fef9e7; color: #f39c12; }
@@ -46,32 +55,32 @@
                 <h4>✏️ Edit Details & Password</h4>
                 <form method="POST" style="margin-top: 15px;">
                     <div class="form-group">
-                        <label>Full Name</label>
-                        <input type="text" name="full_name" value="{{ member.full_name if member.full_name is defined else '' }}" required>
+                        <label for="full_name">Full Name</label>
+                        <input type="text" id="full_name" name="full_name" value="{{ member.full_name if member.full_name is defined else '' }}" required>
                     </div>
                     <div class="form-group">
-                        <label>Phone Number</label>
-                        <input type="text" name="phone" value="{{ member.phone if member.phone is defined else '' }}" required>
+                        <label for="phone">Phone Number</label>
+                        <input type="text" id="phone" name="phone" value="{{ member.phone if member.phone is defined else '' }}" required>
                     </div>
                     <div class="form-group">
-                        <label>National ID No. (NIN)</label>
-                        <input type="text" name="national_id" value="{{ member.national_id if member.national_id is defined else '' }}" required>
+                        <label for="national_id">National ID No. (NIN)</label>
+                        <input type="text" id="national_id" name="national_id" value="{{ member.national_id if member.national_id is defined else '' }}" required>
                     </div>
                     <div class="form-group">
-                        <label>Date of Birth</label>
-                        <input type="date" name="dob" value="{{ member.dob if member.dob is defined else '' }}" required>
+                        <label for="dob">Date of Birth</label>
+                        <input type="date" id="dob" name="dob" value="{{ member.dob if member.dob is defined else '' }}" required>
                     </div>
                     <div class="form-group">
-                        <label>Account Status</label>
-                        <select name="status">
+                        <label for="status">Account Status</label>
+                        <select id="status" name="status">
                             <option value="approved" {% if member.status == 'approved' %}selected{% endif %}>Approved / Active</option>
                             <option value="suspended" {% if member.status == 'suspended' %}selected{% endif %}>Suspended</option>
                             <option value="pending" {% if member.status == 'pending' %}selected{% endif %}>Pending</option>
                         </select>
                     </div>
                     <div class="form-group" style="background: #fdf2e9; padding: 10px; border-radius: 5px; border-left: 3px solid #e67e22;">
-                        <label style="color: #d35400;">🔑 Reset Password</label>
-                        <input type="password" name="password" placeholder="Enter new password (optional)">
+                        <label for="password" style="color: #d35400;">🔑 Reset Password</label>
+                        <input type="password" id="password" name="password" placeholder="Enter new password (optional)" autocomplete="new-password">
                     </div>
                     <button type="submit" class="btn-update">Save Changes</button>
                 </form>
