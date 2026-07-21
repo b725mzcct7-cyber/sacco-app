@@ -251,13 +251,6 @@ def staff_dashboard():
         return redirect(url_for('login'))
 
     user_dict = dict(db_user)
-    role = str(user_dict.get('role', 'staff')).lower().strip()
-
-    # DELETE THESE LINES:
-if role == 'admin':
-    cur.close()
-    conn.close()
-    return redirect(url_for('admin_dashboard'))
 
     # Handle Deposit Submission
     if request.method == 'POST':
@@ -345,8 +338,6 @@ def make_payment():
 @app.route('/admin', methods=['GET', 'POST'])
 @admin_required
 def admin_dashboard():
-    username = session['user'].get('username', '').strip()
-    
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -420,7 +411,39 @@ def admin_dashboard():
     )
 
 
-# --- DISBURSE PAYOUTS QUEUE ROUTE (FOR ROTATION QUEUE) ---
+# --- SINGLE FORM PAYOUT DISBURSEMENT ---
+@app.route('/admin/disburse_payout', methods=['POST'])
+@admin_required
+def disburse_payout():
+    username = request.form.get('username') or request.form.get('staff_id')
+    amount_raw = request.form.get('amount', 0)
+
+    try:
+        amount = float(amount_raw)
+        if amount > 0 and username:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            
+            # Record payout entry in payouts table
+            cur.execute(
+                "INSERT INTO payouts (username, amount, date, notes) VALUES (%s, %s, NOW()::text, %s)",
+                (str(username).strip(), amount, 'Disbursed Payout')
+            )
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            flash(f'Successfully disbursed UGX {amount:,.2f} payout to {username}!', 'success')
+        else:
+            flash('Invalid payout amount or staff member selected.', 'danger')
+    except Exception as e:
+        flash(f'Disbursement error: {e}', 'danger')
+
+    return redirect(url_for('admin_dashboard'))
+
+
+# --- DISBURSE PAYOUTS QUEUE ROUTE (FOR MULTI-SLOT ROTATION QUEUE) ---
 @app.route('/admin/disburse_payouts', methods=['POST'])
 @admin_required
 def disburse_payouts():
@@ -432,7 +455,6 @@ def disburse_payouts():
     cur = conn.cursor()
 
     try:
-        # Process multi-slot form values (e.g., staff_1 to staff_5)
         for i in range(1, 6):
             staff_username = request.form.get(f'staff_{i}')
             amount = request.form.get(f'amount_{i}')
@@ -461,7 +483,6 @@ def disburse_payouts():
         cur.close()
         conn.close()
 
-    # STRICT FIX: Always redirect directly back to admin dashboard
     return redirect(url_for('admin_dashboard'))
 
 
@@ -653,34 +674,8 @@ def logout():
     return redirect(url_for('login'))
 
 
+# ---------------------------------------------------------
+# 5. APPLICATION ENTRY POINT
+# ---------------------------------------------------------
 if __name__ == '__main__':
     app.run(debug=True)
-    @app.route('/admin/disburse_payout', methods=['POST'])
-@admin_required
-def disburse_payout():
-    staff_id = request.form.get('staff_id')
-    amount = float(request.form.get('amount', 0))
-
-    if amount > 0 and staff_id:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        # 1. Record the payout transaction
-        cur.execute(
-            "INSERT INTO transactions (user_id, amount, type, status, date) VALUES (%s, %s, %s, %s, NOW())",
-            (staff_id, amount, 'payout', 'completed')
-        )
-        
-        # 2. Deduct from Reserve Vault & Add to Total Cash Paid Out
-        cur.execute("UPDATE sacco_stats SET reserve_vault = reserve_vault - %s, total_payouts = total_payouts + %s WHERE id = 1", (amount, amount))
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        
-        flash(f'Successfully disbursed UGX {amount:,.2f} payout!', 'success')
-    else:
-        flash('Invalid payout amount or staff member selected.', 'danger')
-
-    # ALWAYS redirect back to admin dashboard, NOT staff page!
-    return redirect(url_for('admin_dashboard'))
