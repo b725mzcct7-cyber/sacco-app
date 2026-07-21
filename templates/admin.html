@@ -134,60 +134,10 @@
             </div>
         </div>
 
-        <!-- Metric Stat Cards Row -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                    <div>
-                        <small class="text-muted fw-bold text-uppercase" style="font-size:0.75rem;">Total Staff Deposits</small>
-                        <h4 class="fw-bold text-dark m-0 mt-1">UGX {{ "{:,.2f}".format(total_deposits|default(0)) }}</h4>
-                    </div>
-                    <div class="stat-icon bg-primary-subtle text-primary"><i class="fa-solid fa-vault"></i></div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                    <div>
-                        <small class="text-muted fw-bold text-uppercase" style="font-size:0.75rem;">Total Cash Paid Out</small>
-                        <h4 class="fw-bold text-dark m-0 mt-1">UGX {{ "{:,.2f}".format(total_payouts|default(0)) }}</h4>
-                    </div>
-                    <div class="stat-icon bg-purple-subtle text-purple" style="background:#f3e8ff; color:#9333ea;"><i class="fa-solid fa-money-bill-transfer"></i></div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                    <div>
-                        <small class="text-muted fw-bold text-uppercase" style="font-size:0.75rem;">SACCO Reserve Vault</small>
-                        <h4 class="fw-bold text-dark m-0 mt-1">UGX {{ "{:,.2f}".format(reserve_vault|default(0)) }}</h4>
-                    </div>
-                    <div class="stat-icon bg-success-subtle text-success"><i class="fa-solid fa-shield-halved"></i></div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                    <div>
-                        <small class="text-muted fw-bold text-uppercase" style="font-size:0.75rem;">Pending Approvals</small>
-                        <h4 class="fw-bold text-dark m-0 mt-1">{{ pending_count|default(0) }}</h4>
-                    </div>
-                    <div class="stat-icon bg-warning-subtle text-warning"><i class="fa-solid fa-clock"></i></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Content Area: Submissions & Queue -->
-        <div class="row g-4">
-            <div class="col-lg-12">
-                <div class="card-custom">
-                    <h5 class="fw-bold mb-2">Pending Member Signup Submissions</h5>
-                    <p class="text-muted small">New staff account registrations requiring admin approval.</p>
-                    <div class="alert alert-success d-flex align-items-center gap-2 m-0 p-3">
-                        <i class="fa-solid fa-circle-check"></i> No pending signup requests right now. All registered members are approved!
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-</body>
-</html>
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btnNormally I can help with things like this, but I don't seem to have access to that content. You can try again or ask me for something else.

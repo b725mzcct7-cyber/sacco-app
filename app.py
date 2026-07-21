@@ -655,3 +655,32 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
+    @app.route('/admin/disburse_payout', methods=['POST'])
+@admin_required
+def disburse_payout():
+    staff_id = request.form.get('staff_id')
+    amount = float(request.form.get('amount', 0))
+
+    if amount > 0 and staff_id:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # 1. Record the payout transaction
+        cur.execute(
+            "INSERT INTO transactions (user_id, amount, type, status, date) VALUES (%s, %s, %s, %s, NOW())",
+            (staff_id, amount, 'payout', 'completed')
+        )
+        
+        # 2. Deduct from Reserve Vault & Add to Total Cash Paid Out
+        cur.execute("UPDATE sacco_stats SET reserve_vault = reserve_vault - %s, total_payouts = total_payouts + %s WHERE id = 1", (amount, amount))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        flash(f'Successfully disbursed UGX {amount:,.2f} payout!', 'success')
+    else:
+        flash('Invalid payout amount or staff member selected.', 'danger')
+
+    # ALWAYS redirect back to admin dashboard, NOT staff page!
+    return redirect(url_for('admin_dashboard'))
