@@ -183,8 +183,7 @@ def register():
 
     return render_template('signup.html')
 
-
-# --- STAFF DASHBOARD (VIEW TRANSACTIONS & SUBMIT DEPOSITS) ---
+# --- STAFF DASHBOARD ---
 @app.route('/dashboard', methods=['GET', 'POST'])
 @app.route('/staff_dashboard', methods=['GET', 'POST'])
 def staff_dashboard():
@@ -200,7 +199,7 @@ def staff_dashboard():
     # Process Deposit Form Submission
     if request.method == 'POST':
         amount = request.form.get('amount')
-        frequency = request.form.get('frequency', 'Monthly')
+        frequency = request.form.get('frequency', 'Weekly')
         date_str = request.form.get('date')
 
         if amount and float(amount) > 0:
@@ -220,28 +219,38 @@ def staff_dashboard():
 
     # Fetch User Transactions
     try:
-        cur.execute('SELECT * FROM transactions WHERE LOWER(username) = LOWER(%s) ORDER BY id DESC', (username,))
+        cur.execute('SELECT * FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) ORDER BY id DESC', (username,))
         user_txs = cur.fetchall()
     except Exception:
         conn.rollback()
         user_txs = []
 
-    # Calculate User Approved Total (Fixed to match any variation of 'approved')
+    # Safe Approved Total Calculation (Case-insensitive match for 'approved')
     try:
         cur.execute(
-            "SELECT SUM(amount) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'approved'", 
+            """
+            SELECT SUM(amount) AS total 
+            FROM transactions 
+            WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) 
+              AND LOWER(TRIM(status)) = 'approved'
+            """, 
             (username,)
         )
         res = cur.fetchone()
         total_approved = float(res['total']) if res and res['total'] is not None else 0.0
-    except Exception:
+    except Exception as e:
         conn.rollback()
         total_approved = 0.0
 
-    # Calculate User Pending Total
+    # Safe Pending Total Calculation
     try:
         cur.execute(
-            "SELECT SUM(amount) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'pending'", 
+            """
+            SELECT SUM(amount) AS total 
+            FROM transactions 
+            WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) 
+              AND LOWER(TRIM(status)) = 'pending'
+            """, 
             (username,)
         )
         res = cur.fetchone()
@@ -260,7 +269,6 @@ def staff_dashboard():
         total_approved=total_approved, 
         total_pending=total_pending
     )
-
 # --- DEPOSIT / PAYMENT ROUTE REDIRECT ---
 @app.route('/deposit', methods=['GET', 'POST'])
 @app.route('/make_payment', methods=['GET', 'POST'])
