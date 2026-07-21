@@ -21,11 +21,12 @@ def get_db_connection():
         raise ValueError("DATABASE_URL environment variable is missing in Render settings.")
         
     url = DATABASE_URL
-    # Fix legacy postgres:// URL scheme if passed by Render
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
         
-    return psycopg2.connect(url, cursor_factory=RealDictCursor)
+    conn = psycopg2.connect(url, cursor_factory=RealDictCursor)
+    conn.autocommit = False
+    return conn
 
 
 def init_db():
@@ -70,7 +71,7 @@ def init_db():
         
         conn.commit()
 
-        # Guarantee Admin Account exists and credentials match admin/admin123
+        # Guarantee Admin Account
         cur.execute('''
             INSERT INTO users (full_name, username, password, role, status)
             VALUES (%s, %s, %s, %s, %s)
@@ -81,11 +82,10 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database tables verified & admin account ready.")
+        print("Database tables initialized successfully.")
     except Exception as e:
-        print("Database initialization notice/error:", e)
+        print("Database init warning/error:", e)
 
-# Run database setup safely on app boot
 init_db()
 
 
@@ -105,11 +105,12 @@ def login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
         
+        conn = None
         try:
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute(
-                'SELECT * FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND password = %s', 
+                "SELECT * FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND TRIM(password) = %s", 
                 (username, password)
             )
             user_row = cur.fetchone()
@@ -122,32 +123,34 @@ def login():
                 raw_status = user_dict.get('status')
                 status = str(raw_status).lower().strip() if raw_status else 'approved'
                 
+                session['user'] = user_dict
+                
                 if role == 'admin':
-                    session['user'] = user_dict
                     return redirect(url_for('admin_dashboard'))
                 
-                if status in ['approved', 'none', 'null']:
-                    session['user'] = user_dict
+                if status in ['approved', 'none', 'null', '']:
                     return redirect(url_for('staff_dashboard'))
                 else:
+                    session.clear()
                     flash('Your account is pending admin approval.', 'warning')
                     return redirect(url_for('login'))
             else:
                 flash('Invalid username or password.', 'danger')
                 return redirect(url_for('login'))
         except Exception as e:
-            flash(f'Database login error: {e}', 'danger')
+            if conn: conn.rollback(); conn.close()
+            flash(f'Login Database Error: {e}', 'danger')
             return redirect(url_for('login'))
             
     return render_template('login.html')
 
 
-# --- REGISTER / SIGNUP ROUTE ---
+# --- REGISTER ROUTE ---
 @app.route('/register', methods=['GET', 'POST'])
 @app.route('/signup', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        full_name = request.form.get('full_name')
+        full_name = request.form.get('full_name', '').strip()
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
         
@@ -155,6 +158,7 @@ def register():
             flash('Username and password are required!', 'danger')
             return redirect(url_for('register'))
             
+        conn = None
         try:
             conn = get_db_connection()
             cur = conn.cursor()
@@ -179,6 +183,7 @@ def register():
             flash('Registration successful! Pending admin approval.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
+            if conn: conn.rollback(); conn.close()
             flash(f'Error creating account: {e}', 'danger')
 
     return render_template('signup.html')
@@ -194,16 +199,16 @@ def staff_dashboard():
     user = session.get('user', {})
     role = str(user.get('role', 'staff')).lower().strip()
 
-    # REDIRECT ADMIN AWAY FROM STAFF DASHBOARD
+    # Route protection: Send admin back to admin area
     if role == 'admin':
         return redirect(url_for('admin_dashboard'))
 
-    username = user.get('username', '')
+    username = user.get('username', '').strip()
     
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Process Deposit Form Submission
+    # Deposit Submission
     if request.method == 'POST':
         amount = request.form.get('amount')
         frequency = request.form.get('frequency', 'Weekly')
@@ -224,7 +229,7 @@ def staff_dashboard():
             flash('Please enter a valid deposit amount.', 'danger')
         return redirect(url_for('staff_dashboard'))
 
-    # Fetch User Transactions
+    # Retrieve User Transactions
     try:
         cur.execute('SELECT * FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) ORDER BY id DESC', (username,))
         user_txs = cur.fetchall()
@@ -232,11 +237,11 @@ def staff_dashboard():
         conn.rollback()
         user_txs = []
 
-    # Safe Approved Total Calculation
+    # Calculate User Approved Total
     try:
         cur.execute(
             """
-            SELECT SUM(amount) AS total 
+            SELECT COALESCE(SUM(amount), 0) AS total 
             FROM transactions 
             WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) 
               AND LOWER(TRIM(status)) = 'approved'
@@ -249,11 +254,11 @@ def staff_dashboard():
         conn.rollback()
         total_approved = 0.0
 
-    # Safe Pending Total Calculation
+    # Calculate User Pending Total
     try:
         cur.execute(
             """
-            SELECT SUM(amount) AS total 
+            SELECT COALESCE(SUM(amount), 0) AS total 
             FROM transactions 
             WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) 
               AND LOWER(TRIM(status)) = 'pending'
@@ -278,7 +283,7 @@ def staff_dashboard():
     )
 
 
-# --- DEPOSIT / PAYMENT ROUTE REDIRECT ---
+# --- MAKE PAYMENT REDIRECT ---
 @app.route('/deposit', methods=['GET', 'POST'])
 @app.route('/make_payment', methods=['GET', 'POST'])
 def make_payment():
@@ -294,7 +299,6 @@ def admin_dashboard():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Pending Approval Users
     try:
         cur.execute("SELECT * FROM users WHERE LOWER(TRIM(status)) = 'pending' AND (LOWER(TRIM(role)) != 'admin' OR role IS NULL)")
         pending_users = cur.fetchall()
@@ -302,7 +306,6 @@ def admin_dashboard():
         conn.rollback()
         pending_users = []
 
-    # Approved Staff List
     try:
         cur.execute("SELECT * FROM users WHERE (LOWER(TRIM(status)) = 'approved' OR status IS NULL) AND (LOWER(TRIM(role)) != 'admin' OR role IS NULL)")
         staff_list = cur.fetchall()
@@ -310,7 +313,6 @@ def admin_dashboard():
         conn.rollback()
         staff_list = []
 
-    # All Transactions
     try:
         cur.execute("SELECT * FROM transactions ORDER BY id DESC")
         transactions = cur.fetchall()
@@ -318,9 +320,8 @@ def admin_dashboard():
         conn.rollback()
         transactions = []
 
-    # Vault & Summary Calculations
     try:
-        cur.execute("SELECT SUM(amount) AS total FROM transactions WHERE LOWER(TRIM(status)) = 'approved'")
+        cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(status)) = 'approved'")
         res = cur.fetchone()
         approved = float(res['total']) if res and res['total'] is not None else 0.0
     except Exception:
@@ -328,14 +329,13 @@ def admin_dashboard():
         approved = 0.0
 
     try:
-        cur.execute("SELECT SUM(amount) AS total FROM transactions WHERE LOWER(TRIM(status)) = 'pending'")
+        cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(status)) = 'pending'")
         res = cur.fetchone()
         pending = float(res['total']) if res and res['total'] is not None else 0.0
     except Exception:
         conn.rollback()
         pending = 0.0
 
-    # Payouts History
     try:
         cur.execute("SELECT * FROM payouts ORDER BY id DESC")
         payout_history = cur.fetchall()
@@ -344,7 +344,7 @@ def admin_dashboard():
         payout_history = []
 
     try:
-        cur.execute("SELECT SUM(amount) AS total FROM payouts")
+        cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM payouts")
         res = cur.fetchone()
         total_paid_out = float(res['total']) if res and res['total'] is not None else 0.0
     except Exception:
@@ -400,7 +400,7 @@ def add_payout():
     return redirect(url_for('admin_dashboard'))
 
 
-# --- ADMIN MEMBER LEDGER & PASSWORD RESET ROUTE ---
+# --- MEMBER LEDGER ROUTE ---
 @app.route('/admin/member/<username>', methods=['GET', 'POST'])
 @app.route('/ledger/<username>', methods=['GET', 'POST'])
 def view_member_ledger(username):
@@ -411,7 +411,7 @@ def view_member_ledger(username):
     cur = conn.cursor()
     target_username = str(username).strip()
 
-    # Process Password Reset if submitted
+    # Password Reset Handler
     if request.method == 'POST':
         new_password = request.form.get('new_password', '').strip()
         if new_password:
@@ -428,7 +428,7 @@ def view_member_ledger(username):
         else:
             flash('Password cannot be empty.', 'danger')
 
-    # Member Profile Info
+    # Fetch Profile
     try:
         cur.execute("SELECT * FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s))", (target_username,))
         member_row = cur.fetchone()
@@ -437,7 +437,7 @@ def view_member_ledger(username):
         conn.rollback()
         member_data = {'username': target_username, 'full_name': target_username}
 
-    # Member Transactions
+    # Fetch Transactions
     try:
         cur.execute("SELECT * FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) ORDER BY id DESC", (target_username,))
         transactions = cur.fetchall()
@@ -445,10 +445,10 @@ def view_member_ledger(username):
         conn.rollback()
         transactions = []
 
-    # Member Totals
+    # Member Approved Total
     try:
         cur.execute(
-            "SELECT SUM(amount) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'approved'", 
+            "SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'approved'", 
             (target_username,)
         )
         res = cur.fetchone()
@@ -457,9 +457,10 @@ def view_member_ledger(username):
         conn.rollback()
         approved_total = 0.0
 
+    # Member Pending Total
     try:
         cur.execute(
-            "SELECT SUM(amount) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'pending'", 
+            "SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s)) AND LOWER(TRIM(status)) = 'pending'", 
             (target_username,)
         )
         res = cur.fetchone()
