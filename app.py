@@ -36,6 +36,10 @@ def init_db():
                 nin TEXT
             );
         ''')
+        # Automatically add columns if they are missing from an older database version
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS nin TEXT;")
+        
         cur.execute('''
             CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY,
